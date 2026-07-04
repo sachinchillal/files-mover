@@ -1,0 +1,48 @@
+{
+  "name": "files-mover",
+  "version": "1.0.0",
+  "description": "A simple Node.js utility to automate moving files from a source directory to a specified destination.",
+  "main": "index.js",
+  "keywords": [
+    "files-mover",
+    "files",
+    "mover",
+    "move",
+    "copy",
+    "copy files",
+    "copy files to destination",
+    "copy files to destination directory",
+    "copy files to destination directory and subdirectories",
+    "copy files to destination directory and subdirectories and files"
+  ],
+  "scripts": {
+    "b": "npm run build",
+    "build": "tsc",
+    "build:copy": "tsc && npm run copy-public",
+    "copy-public": "copyfiles -u 1 \"src/public/**/*\" \"src/data/**/*\" dist",
+    "test": "jest",
+    "start": "ts-node src/index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github-per.com:sachinchillal/viewer.git"
+  },
+  "author": "sachin chillal",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.0.10",
+    "@types/supertest": "^7.2.0",
+    "copyfiles": "^2.4.1",
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  }
+}

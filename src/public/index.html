@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Files Mover</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="manifest" href="site.webmanifest">
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
+  <style>
+    html {
+      background-color: #fff;
+      color: #111827;
+    }
+
+    html.dark {
+      background-color: #111827;
+      color: #e5e7eb;
+    }
+
+    body {
+      background-color: inherit;
+      color: inherit;
+    }
+
+    .browser-panel {
+      min-height: 20rem;
+    }
+
+    .entry-row:focus-visible {
+      outline: 2px solid #2563eb;
+      outline-offset: -2px;
+    }
+
+    .panel-active {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+    }
+
+    html.dark .panel-active {
+      outline-color: #3b82f6;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+  <div class="w-full max-w-6xl mx-auto px-4 py-6 box-border">
+    <header class="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <a href="/" class="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 no-underline">
+        <img src="favicon-32x32.png" alt="" width="32" height="32" class="shrink-0" aria-hidden="true">
+        <h1 class="text-2xl font-bold m-0">Files Mover</h1>
+      </a>
+      <div class="flex flex-wrap items-center gap-3">
+        <a href="/settings/" class="text-sm text-blue-600 dark:text-blue-400 no-underline hover:underline">Settings</a>
+        <div class="flex gap-2">
+        <button type="button" id="btn-light"
+          class="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Light</button>
+        <button type="button" id="btn-dark"
+          class="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Dark</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 mb-6"
+      aria-label="Directory pair selection">
+      <label for="pair-select" class="text-sm font-medium text-gray-600 dark:text-gray-400">Directory pair</label>
+      <div class="mt-2 flex flex-wrap gap-3 items-center">
+        <select id="pair-select"
+          class="flex-1 min-w-[14rem] px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          <option value="">Loading pairs…</option>
+        </select>
+        <a href="/settings/" class="text-sm text-blue-600 dark:text-blue-400 no-underline hover:underline">Manage pairs</a>
+      </div>
+      <p id="pair-status" class="text-sm text-amber-700 dark:text-amber-400 mt-2 mb-0 hidden" role="status"></p>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      <section id="panel-source"
+        class="browser-panel flex flex-col rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4"
+        aria-label="Source directory browser">
+        <h2 class="text-lg font-semibold m-0 mb-3 text-gray-900 dark:text-gray-100">Source</h2>
+        <label class="text-sm font-medium text-gray-600 dark:text-gray-400" for="source-selected-path">Selected
+          items</label>
+        <input type="text" id="source-selected-path" readonly
+          class="mt-1 mb-3 w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          placeholder="Not selected" />
+        <nav id="source-breadcrumb"
+          class="text-sm mb-2 flex flex-wrap gap-1 items-center text-blue-600 dark:text-blue-400"
+          aria-label="Source path"></nav>
+        <div class="flex gap-2 mb-2">
+          <button type="button" id="source-select-all"
+            class="px-3 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Select
+            all</button>
+          <button type="button" id="source-unselect-all"
+            class="px-3 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Unselect
+            all</button>
+        </div>
+        <p id="source-error" class="text-sm text-red-600 dark:text-red-400 hidden mb-2" role="alert"></p>
+        <ul id="source-entries"
+          class="flex-1 overflow-y-auto max-h-72 border border-gray-200 dark:border-gray-700 rounded divide-y divide-gray-100 dark:divide-gray-800 list-none m-0 p-0">
+        </ul>
+        <p id="source-loading" class="text-sm text-gray-500 dark:text-gray-400 mt-2 hidden">Loading…</p>
+      </section>
+
+      <section id="panel-destination"
+        class="browser-panel flex flex-col rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4"
+        aria-label="Destination directory browser">
+        <h2 class="text-lg font-semibold m-0 mb-3 text-gray-900 dark:text-gray-100">Destination</h2>
+        <label class="text-sm font-medium text-gray-600 dark:text-gray-400" for="dest-selected-path">Destination
+          folder</label>
+        <input type="text" id="dest-selected-path" readonly
+          class="mt-1 mb-3 w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          placeholder="Not selected" />
+        <nav id="dest-breadcrumb"
+          class="text-sm mb-2 flex flex-wrap gap-1 items-center text-blue-600 dark:text-blue-400"
+          aria-label="Destination path"></nav>
+        <label for="dest-use-folder"
+          class="flex items-center gap-2 mb-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+          <input type="checkbox" id="dest-use-folder"
+            class="shrink-0 rounded border-gray-300 dark:border-gray-600" />
+          <span id="dest-folder-label">/ (root)</span>
+        </label>
+        <p id="dest-error" class="text-sm text-red-600 dark:text-red-400 hidden mb-2" role="alert"></p>
+        <ul id="dest-entries"
+          class="flex-1 overflow-y-auto max-h-72 border border-gray-200 dark:border-gray-700 rounded divide-y divide-gray-100 dark:divide-gray-800 list-none m-0 p-0">
+        </ul>
+        <p id="dest-loading" class="text-sm text-gray-500 dark:text-gray-400 mt-2 hidden">Loading…</p>
+      </section>
+    </div>
+
+    <section class="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-4 text-center">
+      <button type="button" id="btn-start-copy" disabled
+        class="px-6 py-2 rounded text-sm font-medium bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed">Start
+        copy</button>
+      <p id="copy-status" class="text-sm text-gray-500 dark:text-gray-400 mt-2 mb-0" role="status"></p>
+    </section>
+
+    <section class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 mb-6"
+      aria-label="Ignore directories">
+      <h2 class="text-lg font-semibold m-0 mb-2 text-gray-900 dark:text-gray-100">Ignore directories</h2>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Directory names hidden from both browsers while browsing
+        (e.g. <code class="text-xs">node_modules</code>, <code class="text-xs">.git</code>).</p>
+      <div class="flex flex-wrap gap-2 mb-3">
+        <input type="text" id="ignore-input"
+          class="flex-1 min-w-[10rem] px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          placeholder="Directory name to ignore" />
+        <button type="button" id="ignore-add"
+          class="px-4 py-2 text-sm rounded bg-gray-800 dark:bg-gray-700 text-white hover:bg-gray-900 dark:hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none">Add</button>
+      </div>
+      <div id="ignore-chips" class="flex flex-wrap gap-2"></div>
+    </section>
+
+  </div>
+
+  <script>
+    const API_BASE_URL = '/api';
+    const THEME_KEY = 'files-mover-theme';
+    const IGNORE_STORAGE_KEY = 'files-mover-ignore-list';
+    const PAIR_STORAGE_KEY = 'files-mover-pair-id';
+    const THEME_DARK = 'dark';
+    const THEME_LIGHT = 'light';
+
+    const FOLDER_SVG = '<svg class="w-4 h-4 shrink-0 text-amber-500" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>';
+    const FILE_SVG = '<svg class="w-4 h-4 shrink-0 text-gray-400" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>';
+
+    const panels = {};
+
+    let ignoreList = loadIgnoreList();
+    let activePanelId = 'source';
+    let directoryPairs = [];
+    let selectedPairId = '';
+
+    function createPanelState(id) {
+      const prefix = id === 'source' ? 'source' : 'dest';
+      const sectionId = id === 'source' ? 'panel-source' : 'panel-destination';
+      const els = {
+        section: document.getElementById(sectionId),
+        selectedPath: document.getElementById(`${prefix}-selected-path`),
+        breadcrumb: document.getElementById(`${prefix}-breadcrumb`),
+        error: document.getElementById(`${prefix}-error`),
+        entries: document.getElementById(`${prefix}-entries`),
+        loading: document.getElementById(`${prefix}-loading`),
+      };
+      if (id === 'source') {
+        els.selectAll = document.getElementById('source-select-all');
+        els.unselectAll = document.getElementById('source-unselect-all');
+      } else {
+        els.useFolder = document.getElementById('dest-use-folder');
+        els.folderLabel = document.getElementById('dest-folder-label');
+      }
+      for (const [key, el] of Object.entries(els)) {
+        if (!el) console.error(`Missing #${prefix} element for ${key}`);
+      }
+      const state = {
+        id,
+        currentRoot: '',
+        selectedPath: '',
+        selectedItems: new Set(),
+        currentEntries: [],
+        parent: '',
+        loading: false,
+        els,
+      };
+      return state;
+    }
+
+    function formatFolderLabel(root) {
+      return root ? root : '/ (root)';
+    }
+
+    function renderDestFolderCheckbox(panel) {
+      if (panel.id !== 'destination') return;
+      panel.els.folderLabel.textContent = formatFolderLabel(panel.currentRoot);
+    }
+
+    function entryPath(panel, name) {
+      return panel.currentRoot ? `${panel.currentRoot}/${name}` : name;
+    }
+
+    function clearPanelSelection(panel) {
+      if (panel.id === 'source') {
+        panel.selectedItems.clear();
+      } else {
+        panel.selectedPath = '';
+        if (panel.els.useFolder) {
+          panel.els.useFolder.checked = false;
+        }
+      }
+      updateSelectedSummary(panel);
+      updateCopyButtonState();
+    }
+
+    function updateSelectedSummary(panel) {
+      if (panel.id === 'source') {
+        const items = [...panel.selectedItems];
+        if (!items.length) {
+          panel.els.selectedPath.value = '';
+        } else {
+          const names = items.map((p) => {
+            const parts = p.split('/');
+            return parts[parts.length - 1] || p;
+          });
+          panel.els.selectedPath.value = `${items.length} item${items.length === 1 ? '' : 's'}: ${names.join(', ')}`;
+        }
+      } else {
+        panel.els.selectedPath.value = panel.els.useFolder.checked
+          ? formatFolderLabel(panel.currentRoot)
+          : '';
+      }
+    }
+
+    function selectAllInPanel(panel) {
+      if (panel.id !== 'source' || !panel.currentEntries?.length) return;
+
+      panel.currentEntries.forEach((entry) => {
+        if (entry.type === 'file' && isDeniedFile(entry.name)) return;
+        const path = entryPath(panel, entry.name);
+        if (path.trim() !== '') {
+          panel.selectedItems.add(path);
+        }
+      });
+
+      renderEntries(panel, panel.currentEntries);
+      updateSelectedSummary(panel);
+      updateCopyButtonState();
+    }
+
+    function unselectAllInPanel(panel) {
+      if (panel.id !== 'source') return;
+
+      panel.selectedItems.clear();
+      renderEntries(panel, panel.currentEntries);
+      updateSelectedSummary(panel);
+      updateCopyButtonState();
+    }
+
+    function loadIgnoreList() {
+      try {
+        const raw = localStorage.getItem(IGNORE_STORAGE_KEY);
+        if (!raw) return ['node_modules', '.git'];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.filter(Boolean) : ['node_modules', '.git'];
+      } catch {
+        return ['node_modules', '.git'];
+      }
+    }
+
+    function saveIgnoreList() {
+      localStorage.setItem(IGNORE_STORAGE_KEY, JSON.stringify(ignoreList));
+    }
+
+    function initTheme() {
+      const stored = localStorage.getItem(THEME_KEY);
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = stored === THEME_DARK || stored === THEME_LIGHT
+        ? stored
+        : (prefersDark ? THEME_DARK : THEME_LIGHT);
+      applyTheme(theme);
+      document.getElementById('btn-dark').addEventListener('click', () => applyTheme(THEME_DARK));
+      document.getElementById('btn-light').addEventListener('click', () => applyTheme(THEME_LIGHT));
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.classList.toggle('dark', theme === THEME_DARK);
+      localStorage.setItem(THEME_KEY, theme);
+    }
+
+    function setActivePanel(panelId) {
+      activePanelId = panelId;
+      Object.values(panels).forEach((panel) => {
+        panel.els.section?.classList.toggle('panel-active', panel.id === panelId);
+      });
+    }
+
+    function pairLabel(pair) {
+      const sourceName = pair.source.split(/[/\\]/).filter(Boolean).pop() || pair.source;
+      const destName = pair.destination.split(/[/\\]/).filter(Boolean).pop() || pair.destination;
+      return `${sourceName} → ${destName}`;
+    }
+
+    function loadSelectedPairId() {
+      return localStorage.getItem(PAIR_STORAGE_KEY) || '';
+    }
+
+    function saveSelectedPairId(pairId) {
+      if (pairId) {
+        localStorage.setItem(PAIR_STORAGE_KEY, pairId);
+      } else {
+        localStorage.removeItem(PAIR_STORAGE_KEY);
+      }
+    }
+
+    function showPairStatus(message) {
+      const el = document.getElementById('pair-status');
+      if (!message) {
+        el.textContent = '';
+        el.classList.add('hidden');
+        return;
+      }
+      el.textContent = message;
+      el.classList.remove('hidden');
+    }
+
+    function renderPairSelect() {
+      const select = document.getElementById('pair-select');
+      select.innerHTML = '';
+
+      if (!directoryPairs.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No directory pairs configured';
+        select.appendChild(option);
+        select.disabled = true;
+        selectedPairId = '';
+        showPairStatus('Add a directory pair in Settings before browsing or copying.');
+        return;
+      }
+
+      select.disabled = false;
+      directoryPairs.forEach((pair) => {
+        const option = document.createElement('option');
+        option.value = pair.id;
+        option.textContent = pairLabel(pair);
+        select.appendChild(option);
+      });
+
+      const stored = loadSelectedPairId();
+      const validStored = directoryPairs.some((pair) => pair.id === stored);
+      selectedPairId = validStored ? stored : directoryPairs[0].id;
+      select.value = selectedPairId;
+      saveSelectedPairId(selectedPairId);
+      showPairStatus('');
+    }
+
+    async function loadDirectoryPairs() {
+      const response = await fetch(`${API_BASE_URL}/settings`);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to load directory pairs');
+      }
+      directoryPairs = Array.isArray(data.directories) ? data.directories : [];
+      renderPairSelect();
+    }
+
+    function onPairChange() {
+      selectedPairId = document.getElementById('pair-select').value;
+      saveSelectedPairId(selectedPairId);
+      panels.source.selectedItems.clear();
+      panels.source.currentRoot = '';
+      panels.destination.currentRoot = '';
+      panels.destination.selectedPath = '';
+      if (panels.destination.els.useFolder) {
+        panels.destination.els.useFolder.checked = false;
+      }
+      updateSelectedSummary(panels.source);
+      updateSelectedSummary(panels.destination);
+      updateCopyButtonState();
+      refreshAllPanels();
+    }
+
+    function buildBrowseUrl(panel, root) {
+      const params = new URLSearchParams();
+      if (selectedPairId) params.set('pairId', selectedPairId);
+      if (root) params.set('root', root);
+      if (ignoreList.length) params.set('ignore', ignoreList.join(','));
+      const qs = params.toString();
+      const endpoint = panel.id === 'source' ? '/source/browse' : '/destination/browse';
+      return `${API_BASE_URL}${endpoint}${qs ? `?${qs}` : ''}`;
+    }
+
+    function showPanelError(panel, message) {
+      const el = panel.els.error;
+      if (!message) {
+        el.textContent = '';
+        el.classList.add('hidden');
+        return;
+      }
+      el.textContent = message;
+      el.classList.remove('hidden');
+    }
+
+    function setPanelLoading(panel, loading) {
+      panel.loading = loading;
+      panel.els.loading.classList.toggle('hidden', !loading);
+    }
+
+    function renderBreadcrumb(panel, path) {
+      const nav = panel.els.breadcrumb;
+      nav.innerHTML = '';
+
+      const rootBtn = document.createElement('button');
+      rootBtn.type = 'button';
+      rootBtn.className = 'hover:underline focus:outline-none focus:underline';
+      rootBtn.textContent = '/';
+      rootBtn.addEventListener('click', () => navigatePanel(panel, ''));
+      nav.appendChild(rootBtn);
+
+      if (!path) return;
+
+      const segments = path.split('/').filter(Boolean);
+      let accumulated = '';
+      segments.forEach((seg, index) => {
+        nav.appendChild(document.createTextNode(' / '));
+        accumulated = accumulated ? `${accumulated}/${seg}` : seg;
+        const target = accumulated;
+        const isLast = index === segments.length - 1;
+        if (isLast) {
+          const span = document.createElement('span');
+          span.className = 'text-gray-700 dark:text-gray-300';
+          span.textContent = seg;
+          nav.appendChild(span);
+        } else {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'hover:underline focus:outline-none focus:underline';
+          btn.textContent = seg;
+          btn.addEventListener('click', () => navigatePanel(panel, target));
+          nav.appendChild(btn);
+        }
+      });
+    }
+
+    function renderEntries(panel, entries) {
+      const list = panel.els.entries;
+      list.innerHTML = '';
+
+      if (panel.parent !== '' || panel.currentRoot !== '') {
+        const upLi = document.createElement('li');
+        upLi.className = 'entry-row flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 text-blue-600 dark:text-blue-400 font-medium';
+        upLi.innerHTML = `${FOLDER_SVG}<span>.. (parent)</span>`;
+        upLi.addEventListener('click', () => navigatePanel(panel, panel.parent));
+        list.appendChild(upLi);
+      }
+
+      if (!entries.length && panel.currentRoot === '' && (panel.parent === '' || panel.parent === undefined)) {
+        const empty = document.createElement('li');
+        empty.className = 'px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center';
+        empty.textContent = 'This folder is empty.';
+        list.appendChild(empty);
+        return;
+      }
+
+      if (!entries.length) {
+        return;
+      }
+
+      entries.forEach((entry) => {
+        const li = document.createElement('li');
+        const isDir = entry.type === 'directory';
+        const path = entryPath(panel, entry.name);
+
+        if (panel.id === 'source') {
+          const denied = !isDir && isDeniedFile(entry.name);
+          li.className = isDir
+            ? 'entry-row flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium text-gray-900 dark:text-gray-100'
+            : denied
+              ? 'entry-row flex items-center gap-2 px-3 py-2 text-gray-400 dark:text-gray-500'
+              : 'entry-row flex items-center gap-2 px-3 py-2 text-gray-500 dark:text-gray-400';
+
+          if (!denied) {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'shrink-0 rounded border-gray-300 dark:border-gray-600';
+            checkbox.setAttribute('aria-label', `Select ${entry.name}`);
+            checkbox.checked = panel.selectedItems.has(path);
+            checkbox.addEventListener('click', (e) => e.stopPropagation());
+            checkbox.addEventListener('change', () => {
+              if (checkbox.checked) panel.selectedItems.add(path);
+              else panel.selectedItems.delete(path);
+              if (path.trim() === '') {
+                panel.selectedItems.delete(path);
+              }
+              updateSelectedSummary(panel);
+              updateCopyButtonState();
+            });
+            li.appendChild(checkbox);
+          } else {
+            const spacer = document.createElement('span');
+            spacer.className = 'w-4 shrink-0';
+            spacer.setAttribute('aria-hidden', 'true');
+            li.appendChild(spacer);
+          }
+
+          const iconSpan = document.createElement('span');
+          iconSpan.innerHTML = isDir ? FOLDER_SVG : FILE_SVG;
+          li.appendChild(iconSpan);
+
+          const label = document.createElement('span');
+          label.className = isDir ? 'flex-1 cursor-pointer' : denied ? 'flex-1 italic' : 'flex-1';
+          label.textContent = denied ? `${entry.name} (not copyable)` : entry.name;
+          if (isDir) {
+            label.addEventListener('click', () => navigatePanel(panel, path));
+          }
+          li.appendChild(label);
+        } else {
+          li.className = isDir
+            ? 'entry-row flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 font-medium text-gray-900 dark:text-gray-100'
+            : 'entry-row flex items-center gap-2 px-3 py-2 text-gray-500 dark:text-gray-400';
+          li.innerHTML = `${isDir ? FOLDER_SVG : FILE_SVG}<span>${escapeHtml(entry.name)}</span>`;
+          if (isDir) {
+            li.addEventListener('click', () => navigatePanel(panel, path));
+          }
+        }
+
+        list.appendChild(li);
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function isDeniedFile(name) {
+      const dot = name.lastIndexOf('.');
+      if (dot < 0) return false;
+      return name.slice(dot).toLowerCase() === '.lock';
+    }
+
+    async function fetchBrowse(panel, root) {
+      if (!selectedPairId) {
+        panel.currentEntries = [];
+        renderEntries(panel, []);
+        showPanelError(panel, 'Select a directory pair first');
+        return false;
+      }
+
+      setPanelLoading(panel, true);
+      showPanelError(panel, '');
+
+      try {
+        const response = await fetch(buildBrowseUrl(panel, root));
+        const data = await response.json();
+
+        if (!response.ok) {
+          showPanelError(panel, data.message || `Request failed (${response.status})`);
+          return false;
+        }
+
+        panel.currentRoot = data.path ?? '';
+        panel.parent = data.parent ?? '';
+        panel.currentEntries = data.entries || [];
+        renderBreadcrumb(panel, panel.currentRoot);
+        renderEntries(panel, panel.currentEntries);
+        if (panel.id === 'destination') {
+          renderDestFolderCheckbox(panel);
+          updateSelectedSummary(panel);
+        }
+        return true;
+      } catch (err) {
+        showPanelError(panel, 'Failed to load directory listing');
+        console.error(err);
+        return false;
+      } finally {
+        setPanelLoading(panel, false);
+      }
+    }
+
+    function navigatePanel(panel, root) {
+      clearPanelSelection(panel);
+      fetchBrowse(panel, root);
+    }
+
+    function refreshAllPanels() {
+      if (!selectedPairId) {
+        return;
+      }
+      fetchBrowse(panels.source, panels.source.currentRoot);
+      fetchBrowse(panels.destination, panels.destination.currentRoot);
+    }
+
+    function renderIgnoreChips() {
+      const container = document.getElementById('ignore-chips');
+      container.innerHTML = '';
+
+      if (!ignoreList.length) {
+        const empty = document.createElement('p');
+        empty.className = 'text-sm text-gray-500 dark:text-gray-400 m-0';
+        empty.textContent = 'No ignored directories.';
+        container.appendChild(empty);
+        return;
+      }
+
+      ignoreList.forEach((name) => {
+        const chip = document.createElement('span');
+        chip.className = 'inline-flex items-center gap-1 px-2 py-1 text-sm rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
+        chip.innerHTML = `<span>${escapeHtml(name)}</span>`;
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'ml-1 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 focus:outline-none';
+        removeBtn.setAttribute('aria-label', `Remove ${name}`);
+        removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', () => {
+          ignoreList = ignoreList.filter((n) => n !== name);
+          saveIgnoreList();
+          renderIgnoreChips();
+          refreshAllPanels();
+        });
+        chip.appendChild(removeBtn);
+        container.appendChild(chip);
+      });
+    }
+
+    function addIgnoreName(name) {
+      const trimmed = name.trim();
+      if (!trimmed || ignoreList.includes(trimmed)) return;
+      ignoreList.push(trimmed);
+      ignoreList.sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+      saveIgnoreList();
+      renderIgnoreChips();
+      refreshAllPanels();
+    }
+
+    const COPY_BTN_ENABLED =
+      'px-6 py-2 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none';
+    const COPY_BTN_DISABLED =
+      'px-6 py-2 rounded text-sm font-medium bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed';
+
+    function updateCopyButtonState() {
+      const btn = document.getElementById('btn-start-copy');
+      const enabled = selectedPairId && panels.source && panels.destination &&
+        panels.source.selectedItems.size > 0 &&
+        panels.destination.els.useFolder.checked;
+
+      if (enabled) {
+        btn.disabled = false;
+        btn.className = COPY_BTN_ENABLED;
+      } else {
+        btn.disabled = true;
+        btn.className = COPY_BTN_DISABLED;
+      }
+    }
+
+    function showCopyStatus(message, isError) {
+      const el = document.getElementById('copy-status');
+      el.textContent = message;
+      el.className = isError
+        ? 'text-sm text-red-600 dark:text-red-400 mt-2 mb-0'
+        : 'text-sm text-green-700 dark:text-green-400 mt-2 mb-0';
+    }
+
+    async function startCopy() {
+      const btn = document.getElementById('btn-start-copy');
+      const sources = [...panels.source.selectedItems].filter((p) => p.trim() !== '');
+      const destination = panels.destination.els.useFolder.checked
+        ? panels.destination.currentRoot
+        : '';
+
+      if (!selectedPairId) {
+        showCopyStatus('Select a directory pair first', true);
+        return;
+      }
+
+      if (!sources.length) {
+        showCopyStatus('No source items selected', true);
+        return;
+      }
+
+      if (!panels.destination.els.useFolder.checked) {
+        showCopyStatus('Select a destination folder', true);
+        return;
+      }
+
+      btn.disabled = true;
+      btn.className = COPY_BTN_DISABLED;
+      btn.textContent = 'Copying…';
+      showCopyStatus('', false);
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/copy`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pairId: selectedPairId,
+            sources,
+            destination,
+            ignore: ignoreList.join(','),
+          }),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          showCopyStatus(data.message || `Copy failed (${response.status})`, true);
+          return;
+        }
+
+        const destLabel = data.destination || destination;
+        let status = `Copied ${data.copiedFiles} file${data.copiedFiles === 1 ? '' : 's'} and ${data.copiedDirectories} folder${data.copiedDirectories === 1 ? '' : 's'} into ${destLabel}.`;
+        if (data.skipped?.length) {
+          status += ` Skipped ${data.skipped.length} ignored folder${data.skipped.length === 1 ? '' : 's'}.`;
+        }
+        showCopyStatus(status, false);
+        panels.source.selectedItems.clear();
+        updateSelectedSummary(panels.source);
+        updateCopyButtonState();
+        refreshAllPanels();
+      } catch (err) {
+        showCopyStatus('Failed to start copy', true);
+        console.error(err);
+      } finally {
+        btn.textContent = 'Start copy';
+        updateCopyButtonState();
+      }
+    }
+
+    function init() {
+      panels.source = createPanelState('source');
+      panels.destination = createPanelState('destination');
+
+      panels.source.els.selectAll.addEventListener('click', () => selectAllInPanel(panels.source));
+      panels.source.els.unselectAll.addEventListener('click', () => unselectAllInPanel(panels.source));
+
+      panels.destination.els.useFolder.addEventListener('change', (e) => {
+        panels.destination.selectedPath = e.target.checked
+          ? panels.destination.currentRoot
+          : '';
+        updateSelectedSummary(panels.destination);
+        updateCopyButtonState();
+      });
+
+      panels.source.els.section.addEventListener('focusin', () => setActivePanel('source'));
+      panels.destination.els.section.addEventListener('focusin', () => setActivePanel('destination'));
+      panels.source.els.section.addEventListener('click', () => setActivePanel('source'));
+      panels.destination.els.section.addEventListener('click', () => setActivePanel('destination'));
+
+      document.getElementById('ignore-add').addEventListener('click', () => {
+        const input = document.getElementById('ignore-input');
+        addIgnoreName(input.value);
+        input.value = '';
+        input.focus();
+      });
+
+      document.getElementById('ignore-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addIgnoreName(e.target.value);
+          e.target.value = '';
+        }
+      });
+
+      document.getElementById('btn-start-copy').addEventListener('click', startCopy);
+      document.getElementById('pair-select').addEventListener('change', onPairChange);
+
+      renderIgnoreChips();
+      updateCopyButtonState();
+      setActivePanel('source');
+
+      loadDirectoryPairs()
+        .then(() => {
+          if (selectedPairId) {
+            fetchBrowse(panels.source, '').catch((err) => console.error('Source browse failed:', err));
+            fetchBrowse(panels.destination, '').catch((err) => console.error('Destination browse failed:', err));
+          }
+        })
+        .catch((err) => {
+          showPairStatus('Failed to load directory pairs');
+          console.error(err);
+        });
+    }
+
+    initTheme();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+
+</html>

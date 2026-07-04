@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings - Files Mover</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../site.webmanifest">
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
+  <style>
+    html {
+      background-color: #fff;
+      color: #111827;
+    }
+
+    html.dark {
+      background-color: #111827;
+      color: #e5e7eb;
+    }
+
+    body {
+      background-color: inherit;
+      color: inherit;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+  <div class="w-full max-w-6xl mx-auto px-4 py-6 box-border">
+    <header class="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div class="flex items-center gap-3">
+        <a href="/" class="text-blue-600 dark:text-blue-400 no-underline text-sm hover:underline">← Files Mover</a>
+        <h1 class="text-2xl font-bold m-0">Directory Settings</h1>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" id="btn-light"
+          class="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Light</button>
+        <button type="button" id="btn-dark"
+          class="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Dark</button>
+      </div>
+    </header>
+
+    <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+      Manage source and destination directory pairs used by the Files Mover browser and copy actions.
+    </p>
+
+    <section class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 mb-6"
+      aria-label="Add directory pair">
+      <h2 class="text-lg font-semibold m-0 mb-3 text-gray-900 dark:text-gray-100">Add directory pair</h2>
+      <form id="add-form" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label class="block">
+          <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Source path</span>
+          <input type="text" id="add-source" required
+            class="mt-1 w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            placeholder="C:/path/to/source" />
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Destination path</span>
+          <input type="text" id="add-destination" required
+            class="mt-1 w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            placeholder="C:/path/to/destination" />
+        </label>
+        <div class="md:col-span-2">
+          <button type="submit" id="add-submit"
+            class="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Add
+            pair</button>
+        </div>
+      </form>
+    </section>
+
+    <p id="status" class="text-sm mb-4" role="status" aria-live="polite"></p>
+
+    <section class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4"
+      aria-label="Saved directory pairs">
+      <h2 class="text-lg font-semibold m-0 mb-3 text-gray-900 dark:text-gray-100">Saved pairs</h2>
+      <div id="empty-state" class="hidden text-sm text-gray-500 dark:text-gray-400 py-6 text-center">
+        No directory pairs yet. Add one above to get started.
+      </div>
+      <div id="pairs-list" class="space-y-4"></div>
+    </section>
+  </div>
+
+  <script>
+    const API_BASE_URL = '/api';
+    const THEME_KEY = 'files-mover-theme';
+    const THEME_DARK = 'dark';
+    const THEME_LIGHT = 'light';
+
+    let pairs = [];
+    let editingId = null;
+
+    function initTheme() {
+      const stored = localStorage.getItem(THEME_KEY);
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = stored === THEME_DARK || stored === THEME_LIGHT
+        ? stored
+        : (prefersDark ? THEME_DARK : THEME_LIGHT);
+      applyTheme(theme);
+      document.getElementById('btn-dark').addEventListener('click', () => applyTheme(THEME_DARK));
+      document.getElementById('btn-light').addEventListener('click', () => applyTheme(THEME_LIGHT));
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.classList.toggle('dark', theme === THEME_DARK);
+      localStorage.setItem(THEME_KEY, theme);
+    }
+
+    function showStatus(message, isError = false) {
+      const el = document.getElementById('status');
+      el.textContent = message;
+      el.className = isError
+        ? 'text-sm mb-4 text-red-600 dark:text-red-400'
+        : 'text-sm mb-4 text-green-700 dark:text-green-400';
+    }
+
+    function pairLabel(pair) {
+      const sourceName = pair.source.split(/[/\\]/).filter(Boolean).pop() || pair.source;
+      const destName = pair.destination.split(/[/\\]/).filter(Boolean).pop() || pair.destination;
+      return `${sourceName} → ${destName}`;
+    }
+
+    function inputClass() {
+      return 'w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none';
+    }
+
+    function renderPairs() {
+      const list = document.getElementById('pairs-list');
+      const empty = document.getElementById('empty-state');
+      list.innerHTML = '';
+
+      if (!pairs.length) {
+        empty.classList.remove('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+
+      pairs.forEach((pair) => {
+        const card = document.createElement('article');
+        card.className = 'rounded-lg border border-gray-200 dark:border-gray-700 p-4';
+        card.dataset.id = pair.id;
+
+        if (editingId === pair.id) {
+          card.innerHTML = `
+            <h3 class="text-sm font-semibold m-0 mb-3 text-gray-900 dark:text-gray-100">Edit pair</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label class="block">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Source path</span>
+                <input type="text" class="edit-source mt-1 ${inputClass()}" value="${escapeAttr(pair.source)}" />
+              </label>
+              <label class="block">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Destination path</span>
+                <input type="text" class="edit-destination mt-1 ${inputClass()}" value="${escapeAttr(pair.destination)}" />
+              </label>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-3">
+              <button type="button" class="save-edit px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Save</button>
+              <button type="button" class="cancel-edit px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Cancel</button>
+            </div>
+          `;
+
+          card.querySelector('.save-edit').addEventListener('click', () => saveEdit(pair.id, card));
+          card.querySelector('.cancel-edit').addEventListener('click', () => {
+            editingId = null;
+            renderPairs();
+          });
+        } else {
+          card.innerHTML = `
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <h3 class="text-sm font-semibold m-0 mb-2 text-gray-900 dark:text-gray-100">${escapeHtml(pairLabel(pair))}</h3>
+                <dl class="m-0 space-y-1 text-sm">
+                  <div>
+                    <dt class="inline font-medium text-gray-600 dark:text-gray-400">Source: </dt>
+                    <dd class="inline break-all text-gray-900 dark:text-gray-100">${escapeHtml(pair.source)}</dd>
+                  </div>
+                  <div>
+                    <dt class="inline font-medium text-gray-600 dark:text-gray-400">Destination: </dt>
+                    <dd class="inline break-all text-gray-900 dark:text-gray-100">${escapeHtml(pair.destination)}</dd>
+                  </div>
+                </dl>
+              </div>
+              <div class="flex gap-2 shrink-0">
+                <button type="button" class="edit-pair px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Edit</button>
+                <button type="button" class="delete-pair px-3 py-1.5 text-sm rounded border border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 focus:ring-2 focus:ring-red-500 focus:outline-none">Delete</button>
+              </div>
+            </div>
+          `;
+
+          card.querySelector('.edit-pair').addEventListener('click', () => {
+            editingId = pair.id;
+            renderPairs();
+          });
+          card.querySelector('.delete-pair').addEventListener('click', () => deletePair(pair));
+        }
+
+        list.appendChild(card);
+      });
+    }
+
+    function escapeHtml(value) {
+      return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/'/g, '&#39;');
+    }
+
+    async function loadPairs() {
+      const response = await fetch(`${API_BASE_URL}/settings`);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to load settings');
+      }
+      pairs = Array.isArray(data.directories) ? data.directories : [];
+      renderPairs();
+    }
+
+    async function addPair(event) {
+      event.preventDefault();
+      const source = document.getElementById('add-source').value.trim();
+      const destination = document.getElementById('add-destination').value.trim();
+      const submit = document.getElementById('add-submit');
+
+      submit.disabled = true;
+      submit.textContent = 'Adding…';
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/settings/directories`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source, destination }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          showStatus(data.message || 'Failed to add pair', true);
+          return;
+        }
+
+        document.getElementById('add-form').reset();
+        showStatus('Directory pair added.');
+        await loadPairs();
+      } catch (error) {
+        showStatus('Failed to add pair', true);
+        console.error(error);
+      } finally {
+        submit.disabled = false;
+        submit.textContent = 'Add pair';
+      }
+    }
+
+    async function saveEdit(id, card) {
+      const source = card.querySelector('.edit-source').value.trim();
+      const destination = card.querySelector('.edit-destination').value.trim();
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/settings/directories/${encodeURIComponent(id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source, destination }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          showStatus(data.message || 'Failed to update pair', true);
+          return;
+        }
+
+        editingId = null;
+        showStatus('Directory pair updated.');
+        await loadPairs();
+      } catch (error) {
+        showStatus('Failed to update pair', true);
+        console.error(error);
+      }
+    }
+
+    async function deletePair(pair) {
+      const label = pairLabel(pair);
+      if (!window.confirm(`Delete "${label}"?`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/settings/directories/${encodeURIComponent(pair.id)}`, {
+          method: 'DELETE',
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          showStatus(data.message || 'Failed to delete pair', true);
+          return;
+        }
+
+        if (editingId === pair.id) {
+          editingId = null;
+        }
+        showStatus('Directory pair deleted.');
+        await loadPairs();
+      } catch (error) {
+        showStatus('Failed to delete pair', true);
+        console.error(error);
+      }
+    }
+
+    async function init() {
+      document.getElementById('add-form').addEventListener('submit', addPair);
+
+      try {
+        await loadPairs();
+      } catch (error) {
+        showStatus('Failed to load settings', true);
+        console.error(error);
+      }
+    }
+
+    initTheme();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+
+</html>
