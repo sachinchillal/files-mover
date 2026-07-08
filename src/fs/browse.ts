@@ -1,7 +1,12 @@
 import fs from 'fs';
-import path from 'path';
-import type { BrowseEntry, BrowseResult } from '../types';
+import type { BrowseEntry, BrowseResult, LocationFilters } from '../types';
 import { isDeniedFile } from '../path/denied';
+import {
+  filterEntries,
+  filterEntryName,
+  resolveSelection,
+  type SelectionMode,
+} from '../path/locationFilters';
 import {
   normalizeSegments,
   resolveWithinRoot,
@@ -17,30 +22,27 @@ const parentPath = (segments: string[]): string => {
   return segments.slice(0, -1).join('/');
 };
 
-const buildEntries = (
-  dirPath: string,
-  ignoreNames: Set<string>
-): BrowseEntry[] => {
-  const entries: BrowseEntry[] = [];
+const buildEntries = (dirPath: string, filters: LocationFilters): BrowseEntry[] => {
   const dirents = fs.readdirSync(dirPath, { withFileTypes: true });
 
   const dirs: string[] = [];
   const files: string[] = [];
 
   for (const dirent of dirents) {
+    if (!filterEntryName(dirent.name, filters)) {
+      continue;
+    }
     if (dirent.isDirectory()) {
-      if (!ignoreNames.has(dirent.name)) {
-        dirs.push(dirent.name);
-      }
+      dirs.push(dirent.name);
     } else if (dirent.isFile()) {
       files.push(dirent.name);
     }
   }
 
+  const entries: BrowseEntry[] = [];
   for (const name of dirs.sort(sortNames)) {
     entries.push({ name, type: 'directory' });
   }
-
   for (const name of files.sort(sortNames)) {
     entries.push({ name, type: 'file' });
   }
@@ -48,23 +50,34 @@ const buildEntries = (
   return entries;
 };
 
-export const browseFilesystem = (
+const emptyResult = (): BrowseResult => ({
+  path: '',
+  parent: '',
+  entries: [],
+  selection: [],
+  message: '',
+});
+
+const browseFilesystem = (
   baseRoot: string,
   root: string | undefined,
-  ignoreNames: Set<string>
+  filters: LocationFilters,
+  mode: SelectionMode
 ): BrowseResult => {
-  const empty: BrowseResult = { path: '', parent: '', entries: [], message: '' };
+  const empty = emptyResult();
 
   if (!fs.existsSync(baseRoot)) {
     return { ...empty, message: 'Directory not found' };
   }
 
   if (!root) {
+    const entries = buildEntries(baseRoot, filters);
     return {
       ...empty,
       path: '',
       parent: '',
-      entries: buildEntries(baseRoot, ignoreNames),
+      entries,
+      selection: resolveSelection(entries, '', filters.selection, { mode }),
     };
   }
 
@@ -95,10 +108,12 @@ export const browseFilesystem = (
   }
 
   const browsePath = segments.join('/');
+  const entries = buildEntries(resolved, filters);
   return {
     path: browsePath,
     parent: parentPath(segments),
-    entries: buildEntries(resolved, ignoreNames),
+    entries,
+    selection: resolveSelection(entries, browsePath, filters.selection, { mode }),
     message: '',
   };
 };
@@ -106,11 +121,11 @@ export const browseFilesystem = (
 export const browseSourceTree = (
   baseRoot: string,
   root: string | undefined,
-  ignoreNames: Set<string>
-): BrowseResult => browseFilesystem(baseRoot, root, ignoreNames);
+  filters: LocationFilters
+): BrowseResult => browseFilesystem(baseRoot, root, filters, 'source');
 
 export const browseDestinationTree = (
   baseRoot: string,
   root: string | undefined,
-  ignoreNames: Set<string>
-): BrowseResult => browseFilesystem(baseRoot, root, ignoreNames);
+  filters: LocationFilters
+): BrowseResult => browseFilesystem(baseRoot, root, filters, 'destination');

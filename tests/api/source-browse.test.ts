@@ -23,6 +23,7 @@ describe(`GET ${API_BASE_URL}source/browse`, () => {
     expect(res.body.path).toBe('');
     expect(res.body.parent).toBe('');
     expect(res.body.message).toBe('');
+    expect(res.body.selection).toEqual([]);
     expect(res.body.entries).toEqual(
       expect.arrayContaining([
         { name: TestDataDirectories.folder, type: 'directory' },
@@ -41,6 +42,7 @@ describe(`GET ${API_BASE_URL}source/browse`, () => {
     expect(res.body.path).toBe(root);
     expect(res.body.parent).toBe('');
     expect(res.body.message).toBe('');
+    expect(res.body.selection).toEqual([]);
     expect(res.body.entries).toEqual(
       expect.arrayContaining([
         ...dirNames.map((name) => ({ name, type: 'directory' })),
@@ -59,6 +61,62 @@ describe(`GET ${API_BASE_URL}source/browse`, () => {
     expect(res.status).toBe(200);
     const names = res.body.entries.map((e: { name: string }) => e.name);
     expect(names).not.toContain(ignored);
+    expect(res.body.selection).toEqual([]);
+  });
+
+  it('shows only whitelisted names when whitelist is configured', async () => {
+    writeTestSettings(SOURCE_TEST_DIR, DESTINATION_TEST_DIR, undefined, undefined, {
+      sourceFilters: { whitelist: [TestDataDirectories.files[0]] },
+    });
+
+    const res = await request(app).get(
+      withPairQuery(`${API_BASE_URL}source/browse?root=${TestDataDirectories.folder}`)
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toEqual([{ name: TestDataDirectories.files[0], type: 'file' }]);
+    expect(res.body.selection).toEqual([]);
+  });
+
+  it('hides blacklisted names from settings', async () => {
+    const blocked = TestDataDirectories.files[0];
+    writeTestSettings(SOURCE_TEST_DIR, DESTINATION_TEST_DIR, undefined, undefined, {
+      sourceFilters: { blacklist: [blocked] },
+    });
+
+    const res = await request(app).get(
+      withPairQuery(`${API_BASE_URL}source/browse?root=${TestDataDirectories.folder}`)
+    );
+
+    expect(res.status).toBe(200);
+    const names = res.body.entries.map((e: { name: string }) => e.name);
+    expect(names).not.toContain(blocked);
+    expect(res.body.selection).toEqual([]);
+  });
+
+  it('returns explicit selection paths from settings', async () => {
+    const selectedFile = TestDataDirectories.files[0];
+    writeTestSettings(SOURCE_TEST_DIR, DESTINATION_TEST_DIR, undefined, undefined, {
+      sourceFilters: { selection: [selectedFile] },
+    });
+
+    const res = await request(app).get(
+      withPairQuery(`${API_BASE_URL}source/browse?root=${TestDataDirectories.folder}`)
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.selection).toEqual([`${TestDataDirectories.folder}/${selectedFile}`]);
+  });
+
+  it('returns all visible entry paths when selection contains *', async () => {
+    writeTestSettings(SOURCE_TEST_DIR, DESTINATION_TEST_DIR, undefined, undefined, {
+      sourceFilters: { selection: ['*'] },
+    });
+
+    const res = await request(app).get(withPairQuery(`${API_BASE_URL}source/browse`));
+
+    expect(res.status).toBe(200);
+    expect(res.body.selection).toEqual([TestDataDirectories.folder]);
   });
 
   it('returns 400 for path traversal with ..', async () => {

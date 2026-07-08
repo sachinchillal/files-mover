@@ -16,22 +16,48 @@
   </script>
   <style>
     html {
-      background-color: #fff;
+      background-color: #f3f4f6;
       color: #111827;
+      height: 100%;
     }
 
     html.dark {
-      background-color: #111827;
+      background-color: #0f172a;
       color: #e5e7eb;
     }
 
     body {
       background-color: inherit;
       color: inherit;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .app-shell {
+      min-width: 1280px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 15rem minmax(0, 1fr);
+      min-height: 0;
+      flex: 1;
     }
 
     .browser-panel {
-      min-height: 20rem;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      height: 100%;
+    }
+
+    .entry-list {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
     }
 
     .entry-row:focus-visible {
@@ -40,123 +66,149 @@
     }
 
     .panel-active {
-      outline: 2px solid #2563eb;
-      outline-offset: 2px;
+      box-shadow: inset 0 0 0 2px #2563eb;
     }
 
     html.dark .panel-active {
-      outline-color: #3b82f6;
+      box-shadow: inset 0 0 0 2px #3b82f6;
     }
   </style>
 </head>
 
-<body class="min-h-screen">
-  <div class="w-full max-w-6xl mx-auto px-4 py-6 box-border">
-    <header class="flex flex-wrap items-center justify-between gap-4 mb-6">
-      <a href="/" class="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 no-underline">
-        <img src="favicon-32x32.png" alt="" width="32" height="32" class="shrink-0" aria-hidden="true">
-        <h1 class="text-2xl font-bold m-0">Files Mover</h1>
+<body>
+  <div class="app-shell">
+    <header
+      class="shrink-0 flex items-center justify-between gap-6 px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+      <a href="/" class="inline-flex items-center gap-2.5 text-blue-600 dark:text-blue-400 no-underline">
+        <img src="favicon-32x32.png" alt="" width="28" height="28" class="shrink-0" aria-hidden="true">
+        <h1 class="text-lg font-semibold m-0 tracking-tight text-gray-900 dark:text-gray-100">Files Mover</h1>
       </a>
-      <div class="flex flex-wrap items-center gap-3">
-        <a href="/settings/" class="text-sm text-blue-600 dark:text-blue-400 no-underline hover:underline">Settings</a>
-        <div class="flex gap-2">
-        <button type="button" id="btn-light"
-          class="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Light</button>
-        <button type="button" id="btn-dark"
-          class="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Dark</button>
+      <div class="flex items-center gap-4">
+        <nav class="flex items-center gap-4 text-sm">
+          <a href="/zip-extractor/" class="text-gray-600 dark:text-gray-300 no-underline hover:text-blue-600 dark:hover:text-blue-400">Zip Extractor</a>
+          <a href="/settings/" class="text-gray-600 dark:text-gray-300 no-underline hover:text-blue-600 dark:hover:text-blue-400">Settings</a>
+        </nav>
+        <div class="h-5 w-px bg-gray-200 dark:bg-gray-700" aria-hidden="true"></div>
+        <div class="flex gap-1">
+          <button type="button" id="btn-light"
+            class="px-2.5 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Light</button>
+          <button type="button" id="btn-dark"
+            class="px-2.5 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Dark</button>
         </div>
       </div>
     </header>
 
-    <section class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 mb-6"
+    <div
+      class="shrink-0 flex items-center gap-4 px-5 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60"
       aria-label="Directory pair selection">
-      <label for="pair-select" class="text-sm font-medium text-gray-600 dark:text-gray-400">Directory pair</label>
-      <div class="mt-2 flex flex-wrap gap-3 items-center">
-        <select id="pair-select"
-          class="flex-1 min-w-[14rem] px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-          <option value="">Loading pairs…</option>
-        </select>
-        <a href="/settings/" class="text-sm text-blue-600 dark:text-blue-400 no-underline hover:underline">Manage pairs</a>
-      </div>
-      <p id="pair-status" class="text-sm text-amber-700 dark:text-amber-400 mt-2 mb-0 hidden" role="status"></p>
-    </section>
+      <label for="pair-select" class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 shrink-0">Directory pair</label>
+      <select id="pair-select"
+        class="w-80 px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <option value="">Loading pairs…</option>
+      </select>
+      <a href="/settings/" class="text-sm text-blue-600 dark:text-blue-400 no-underline hover:underline shrink-0">Manage pairs</a>
+      <p id="pair-status" class="text-sm text-amber-700 dark:text-amber-400 m-0 hidden truncate" role="status"></p>
+    </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-      <section id="panel-source"
-        class="browser-panel flex flex-col rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4"
+    <div class="workspace-grid flex-1 border-b border-gray-200 dark:border-gray-700">
+      <section id="panel-source" class="browser-panel border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
         aria-label="Source directory browser">
-        <h2 class="text-lg font-semibold m-0 mb-3 text-gray-900 dark:text-gray-100">Source</h2>
-        <label class="text-sm font-medium text-gray-600 dark:text-gray-400" for="source-selected-path">Selected
-          items</label>
-        <input type="text" id="source-selected-path" readonly
-          class="mt-1 mb-3 w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-          placeholder="Not selected" />
-        <nav id="source-breadcrumb"
-          class="text-sm mb-2 flex flex-wrap gap-1 items-center text-blue-600 dark:text-blue-400"
-          aria-label="Source path"></nav>
-        <div class="flex gap-2 mb-2">
-          <button type="button" id="source-select-all"
-            class="px-3 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Select
-            all</button>
-          <button type="button" id="source-unselect-all"
-            class="px-3 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Unselect
-            all</button>
+        <div class="shrink-0 px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40">
+          <div class="flex items-center justify-between gap-3 mb-1.5">
+            <h2 class="text-sm font-semibold m-0 text-gray-900 dark:text-gray-100 uppercase tracking-wide">Source</h2>
+            <div class="flex items-center gap-2">
+              <button type="button" id="source-select-all"
+                class="px-2.5 py-1 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Select all</button>
+              <button type="button" id="source-unselect-all"
+                class="px-2.5 py-1 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Clear</button>
+              <select id="source-sort"
+                class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                aria-label="Sort source entries">
+                <option value="title-asc">A–Z</option>
+                <option value="title-desc">Z–A</option>
+              </select>
+            </div>
+          </div>
+          <nav id="source-breadcrumb"
+            class="text-xs flex flex-wrap gap-1 items-center text-blue-600 dark:text-blue-400 min-h-[1.25rem]"
+            aria-label="Source path"></nav>
         </div>
-        <p id="source-error" class="text-sm text-red-600 dark:text-red-400 hidden mb-2" role="alert"></p>
+        <p id="source-error" class="text-xs text-red-600 dark:text-red-400 hidden px-4 py-2 m-0 border-b border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/20" role="alert"></p>
         <ul id="source-entries"
-          class="flex-1 overflow-y-auto max-h-72 border border-gray-200 dark:border-gray-700 rounded divide-y divide-gray-100 dark:divide-gray-800 list-none m-0 p-0">
+          class="entry-list divide-y divide-gray-100 dark:divide-gray-800 list-none m-0 p-0">
         </ul>
-        <p id="source-loading" class="text-sm text-gray-500 dark:text-gray-400 mt-2 hidden">Loading…</p>
+        <p id="source-loading" class="text-xs text-gray-500 dark:text-gray-400 px-4 py-2 m-0 border-t border-gray-100 dark:border-gray-800 hidden">Loading…</p>
+        <input type="hidden" id="source-selected-path" value="" />
       </section>
 
-      <section id="panel-destination"
-        class="browser-panel flex flex-col rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4"
+      <aside id="action-rail"
+        class="flex flex-col justify-between gap-4 px-4 py-5 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/80"
+        aria-label="Transfer actions">
+        <div>
+          <p class="text-[0.65rem] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 m-0 mb-1.5">From</p>
+          <div id="source-selection-summary"
+            class="text-xs leading-relaxed text-gray-700 dark:text-gray-300 min-h-[3.5rem] max-h-28 overflow-y-auto rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2.5 py-2"
+            aria-live="polite">Nothing selected</div>
+        </div>
+
+        <div class="flex flex-col gap-2.5">
+          <button type="button" id="btn-start-copy" disabled
+            class="w-full px-4 py-2.5 rounded-md text-sm font-semibold bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed">Copy →</button>
+          <button type="button" id="btn-start-move" disabled
+            class="w-full px-4 py-2.5 rounded-md text-sm font-semibold bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed">Move →</button>
+          <p id="transfer-status" class="text-xs text-center text-gray-500 dark:text-gray-400 m-0 min-h-[2.5rem]" role="status"></p>
+        </div>
+
+        <div>
+          <p class="text-[0.65rem] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 m-0 mb-1.5">To</p>
+          <div id="dest-selection-summary"
+            class="text-xs leading-relaxed text-gray-700 dark:text-gray-300 min-h-[3.5rem] rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2.5 py-2"
+            aria-live="polite">Not selected</div>
+          <input type="hidden" id="dest-selected-path" value="" />
+        </div>
+      </aside>
+
+      <section id="panel-destination" class="browser-panel bg-white dark:bg-gray-900"
         aria-label="Destination directory browser">
-        <h2 class="text-lg font-semibold m-0 mb-3 text-gray-900 dark:text-gray-100">Destination</h2>
-        <label class="text-sm font-medium text-gray-600 dark:text-gray-400" for="dest-selected-path">Destination
-          folder</label>
-        <input type="text" id="dest-selected-path" readonly
-          class="mt-1 mb-3 w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-          placeholder="Not selected" />
-        <nav id="dest-breadcrumb"
-          class="text-sm mb-2 flex flex-wrap gap-1 items-center text-blue-600 dark:text-blue-400"
-          aria-label="Destination path"></nav>
-        <label for="dest-use-folder"
-          class="flex items-center gap-2 mb-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-          <input type="checkbox" id="dest-use-folder"
-            class="shrink-0 rounded border-gray-300 dark:border-gray-600" />
-          <span id="dest-folder-label">/ (root)</span>
+        <div class="shrink-0 px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40">
+          <div class="flex items-center justify-between gap-3 mb-1.5">
+            <h2 class="text-sm font-semibold m-0 text-gray-900 dark:text-gray-100 uppercase tracking-wide">Destination</h2>
+            <select id="dest-sort"
+              class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              aria-label="Sort destination entries">
+              <option value="title-asc">A–Z</option>
+              <option value="title-desc">Z–A</option>
+            </select>
+          </div>
+          <nav id="dest-breadcrumb"
+            class="text-xs flex flex-wrap gap-1 items-center text-blue-600 dark:text-blue-400 min-h-[1.25rem]"
+            aria-label="Destination path"></nav>
+        </div>
+        <label for="dest-current-folder"
+          class="shrink-0 flex items-center gap-2 mx-4 mt-2 mb-1 px-2.5 py-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer rounded border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800">
+          <input type="radio" name="dest-selection" id="dest-current-folder"
+            class="shrink-0 border-gray-300 dark:border-gray-600" />
+          <span id="dest-folder-label">Use this folder: / (root)</span>
         </label>
-        <p id="dest-error" class="text-sm text-red-600 dark:text-red-400 hidden mb-2" role="alert"></p>
+        <p id="dest-error" class="text-xs text-red-600 dark:text-red-400 hidden px-4 py-2 m-0 border-b border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/20" role="alert"></p>
         <ul id="dest-entries"
-          class="flex-1 overflow-y-auto max-h-72 border border-gray-200 dark:border-gray-700 rounded divide-y divide-gray-100 dark:divide-gray-800 list-none m-0 p-0">
+          class="entry-list divide-y divide-gray-100 dark:divide-gray-800 list-none m-0 p-0">
         </ul>
-        <p id="dest-loading" class="text-sm text-gray-500 dark:text-gray-400 mt-2 hidden">Loading…</p>
+        <p id="dest-loading" class="text-xs text-gray-500 dark:text-gray-400 px-4 py-2 m-0 border-t border-gray-100 dark:border-gray-800 hidden">Loading…</p>
       </section>
     </div>
 
-    <section class="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-4 text-center">
-      <button type="button" id="btn-start-copy" disabled
-        class="px-6 py-2 rounded text-sm font-medium bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed">Start
-        copy</button>
-      <p id="copy-status" class="text-sm text-gray-500 dark:text-gray-400 mt-2 mb-0" role="status"></p>
-    </section>
-
-    <section class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 mb-6"
+    <section
+      class="shrink-0 flex items-center gap-3 px-5 py-2.5 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
       aria-label="Ignore directories">
-      <h2 class="text-lg font-semibold m-0 mb-2 text-gray-900 dark:text-gray-100">Ignore directories</h2>
-      <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Directory names hidden from both browsers while browsing
-        (e.g. <code class="text-xs">node_modules</code>, <code class="text-xs">.git</code>).</p>
-      <div class="flex flex-wrap gap-2 mb-3">
-        <input type="text" id="ignore-input"
-          class="flex-1 min-w-[10rem] px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          placeholder="Directory name to ignore" />
-        <button type="button" id="ignore-add"
-          class="px-4 py-2 text-sm rounded bg-gray-800 dark:bg-gray-700 text-white hover:bg-gray-900 dark:hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none">Add</button>
-      </div>
-      <div id="ignore-chips" class="flex flex-wrap gap-2"></div>
+      <span class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 shrink-0">Ignore</span>
+      <input type="text" id="ignore-input"
+        class="w-48 px-2.5 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        placeholder="e.g. node_modules" />
+      <button type="button" id="ignore-add"
+        class="px-3 py-1.5 text-sm rounded bg-gray-800 dark:bg-gray-700 text-white hover:bg-gray-900 dark:hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none shrink-0">Add</button>
+      <div id="ignore-chips" class="flex flex-wrap gap-1.5 min-w-0 flex-1"></div>
     </section>
-
   </div>
 
   <script>
@@ -164,6 +216,12 @@
     const THEME_KEY = 'files-mover-theme';
     const IGNORE_STORAGE_KEY = 'files-mover-ignore-list';
     const PAIR_STORAGE_KEY = 'files-mover-pair-id';
+    const SORT_ASC = 'title-asc';
+    const SORT_DESC = 'title-desc';
+    const PANEL_SORT_KEYS = {
+      source: 'files-mover-source-sort',
+      destination: 'files-mover-dest-sort',
+    };
     const THEME_DARK = 'dark';
     const THEME_LIGHT = 'light';
 
@@ -183,16 +241,18 @@
       const els = {
         section: document.getElementById(sectionId),
         selectedPath: document.getElementById(`${prefix}-selected-path`),
+        selectionSummary: document.getElementById(`${prefix}-selection-summary`),
         breadcrumb: document.getElementById(`${prefix}-breadcrumb`),
         error: document.getElementById(`${prefix}-error`),
         entries: document.getElementById(`${prefix}-entries`),
         loading: document.getElementById(`${prefix}-loading`),
+        sortSelect: document.getElementById(`${prefix}-sort`),
       };
       if (id === 'source') {
         els.selectAll = document.getElementById('source-select-all');
         els.unselectAll = document.getElementById('source-unselect-all');
       } else {
-        els.useFolder = document.getElementById('dest-use-folder');
+        els.currentFolderRadio = document.getElementById('dest-current-folder');
         els.folderLabel = document.getElementById('dest-folder-label');
       }
       for (const [key, el] of Object.entries(els)) {
@@ -206,18 +266,63 @@
         currentEntries: [],
         parent: '',
         loading: false,
+        sortOrder: loadPanelSortOrder(id),
         els,
       };
       return state;
+    }
+
+    function loadPanelSortOrder(panelId) {
+      try {
+        const stored = localStorage.getItem(PANEL_SORT_KEYS[panelId]);
+        return stored === SORT_DESC ? SORT_DESC : SORT_ASC;
+      } catch {
+        return SORT_ASC;
+      }
+    }
+
+    function savePanelSortOrder(panelId, sortOrder) {
+      try {
+        localStorage.setItem(PANEL_SORT_KEYS[panelId], sortOrder);
+      } catch {
+        // ignore storage errors
+      }
+    }
+
+    function sortEntriesByTitle(entries, sortOrder) {
+      const sorted = [...entries];
+      sorted.sort((a, b) => {
+        const cmp = a.name.localeCompare(b.name, 'en', { numeric: true, sensitivity: 'base' });
+        return sortOrder === SORT_DESC ? -cmp : cmp;
+      });
+      return sorted;
+    }
+
+    function onPanelSortChange(panel) {
+      panel.sortOrder = panel.els.sortSelect.value;
+      savePanelSortOrder(panel.id, panel.sortOrder);
+      renderEntries(panel, panel.currentEntries);
     }
 
     function formatFolderLabel(root) {
       return root ? root : '/ (root)';
     }
 
-    function renderDestFolderCheckbox(panel) {
+    function renderDestCurrentFolderRadio(panel) {
       if (panel.id !== 'destination') return;
-      panel.els.folderLabel.textContent = formatFolderLabel(panel.currentRoot);
+      const label = formatFolderLabel(panel.currentRoot);
+      panel.els.folderLabel.textContent = `Use this folder: ${label}`;
+      if (panel.els.currentFolderRadio) {
+        panel.els.currentFolderRadio.checked = panel.selectedPath === panel.currentRoot;
+      }
+    }
+
+    function selectDestination(panel, path) {
+      panel.selectedPath = path;
+      updateSelectedSummary(panel);
+      updateActionButtonState();
+      renderDestCurrentFolderRadio(panel);
+      renderEntries(panel, panel.currentEntries);
     }
 
     function entryPath(panel, name) {
@@ -229,12 +334,9 @@
         panel.selectedItems.clear();
       } else {
         panel.selectedPath = '';
-        if (panel.els.useFolder) {
-          panel.els.useFolder.checked = false;
-        }
       }
       updateSelectedSummary(panel);
-      updateCopyButtonState();
+      updateActionButtonState();
     }
 
     function updateSelectedSummary(panel) {
@@ -242,17 +344,20 @@
         const items = [...panel.selectedItems];
         if (!items.length) {
           panel.els.selectedPath.value = '';
+          panel.els.selectionSummary.textContent = 'Nothing selected';
         } else {
           const names = items.map((p) => {
             const parts = p.split('/');
             return parts[parts.length - 1] || p;
           });
-          panel.els.selectedPath.value = `${items.length} item${items.length === 1 ? '' : 's'}: ${names.join(', ')}`;
+          const summary = `${items.length} item${items.length === 1 ? '' : 's'}: ${names.join(', ')}`;
+          panel.els.selectedPath.value = summary;
+          panel.els.selectionSummary.textContent = summary;
         }
       } else {
-        panel.els.selectedPath.value = panel.els.useFolder.checked
-          ? formatFolderLabel(panel.currentRoot)
-          : '';
+        const label = panel.selectedPath ? formatFolderLabel(panel.selectedPath) : '';
+        panel.els.selectedPath.value = label;
+        panel.els.selectionSummary.textContent = label || 'Not selected';
       }
     }
 
@@ -269,7 +374,7 @@
 
       renderEntries(panel, panel.currentEntries);
       updateSelectedSummary(panel);
-      updateCopyButtonState();
+      updateActionButtonState();
     }
 
     function unselectAllInPanel(panel) {
@@ -278,7 +383,7 @@
       panel.selectedItems.clear();
       renderEntries(panel, panel.currentEntries);
       updateSelectedSummary(panel);
-      updateCopyButtonState();
+      updateActionButtonState();
     }
 
     function loadIgnoreList() {
@@ -320,9 +425,7 @@
     }
 
     function pairLabel(pair) {
-      const sourceName = pair.source.split(/[/\\]/).filter(Boolean).pop() || pair.source;
-      const destName = pair.destination.split(/[/\\]/).filter(Boolean).pop() || pair.destination;
-      return `${sourceName} → ${destName}`;
+      return pair.title || pair.source.path;
     }
 
     function loadSelectedPairId() {
@@ -396,12 +499,9 @@
       panels.source.currentRoot = '';
       panels.destination.currentRoot = '';
       panels.destination.selectedPath = '';
-      if (panels.destination.els.useFolder) {
-        panels.destination.els.useFolder.checked = false;
-      }
       updateSelectedSummary(panels.source);
       updateSelectedSummary(panels.destination);
-      updateCopyButtonState();
+      updateActionButtonState();
       refreshAllPanels();
     }
 
@@ -429,6 +529,51 @@
     function setPanelLoading(panel, loading) {
       panel.loading = loading;
       panel.els.loading.classList.toggle('hidden', !loading);
+    }
+
+    const ROW_CLICK_DELAY_MS = 250;
+    const SELECTED_ROW_CLASSES = ['bg-blue-50', 'dark:bg-blue-900/20'];
+
+    function setRowSelected(li, selected) {
+      SELECTED_ROW_CLASSES.forEach((cls) => li.classList.toggle(cls, selected));
+    }
+
+    function createOpenButton(name, onOpen) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = 'Open';
+      btn.className = 'shrink-0 px-2 py-0.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none';
+      btn.setAttribute('aria-label', `Open ${name}`);
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onOpen();
+      });
+      return btn;
+    }
+
+    function bindRowSelectAndOpen(li, { onSelect, onOpen }) {
+      let clickTimer = null;
+
+      li.addEventListener('click', (e) => {
+        if (e.target.closest('input, button')) return;
+
+        if (clickTimer) clearTimeout(clickTimer);
+        clickTimer = setTimeout(() => {
+          clickTimer = null;
+          onSelect();
+        }, ROW_CLICK_DELAY_MS);
+      });
+
+      if (onOpen) {
+        li.addEventListener('dblclick', (e) => {
+          if (e.target.closest('input, button')) return;
+          if (clickTimer) {
+            clearTimeout(clickTimer);
+            clickTimer = null;
+          }
+          onOpen();
+        });
+      }
     }
 
     function renderBreadcrumb(panel, path) {
@@ -470,6 +615,7 @@
     function renderEntries(panel, entries) {
       const list = panel.els.entries;
       list.innerHTML = '';
+      const sortedEntries = sortEntriesByTitle(entries, panel.sortOrder);
 
       if (panel.parent !== '' || panel.currentRoot !== '') {
         const upLi = document.createElement('li');
@@ -479,7 +625,7 @@
         list.appendChild(upLi);
       }
 
-      if (!entries.length && panel.currentRoot === '' && (panel.parent === '' || panel.parent === undefined)) {
+      if (!sortedEntries.length && panel.currentRoot === '' && (panel.parent === '' || panel.parent === undefined)) {
         const empty = document.createElement('li');
         empty.className = 'px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center';
         empty.textContent = 'This folder is empty.';
@@ -487,29 +633,35 @@
         return;
       }
 
-      if (!entries.length) {
+      if (!sortedEntries.length) {
         return;
       }
 
-      entries.forEach((entry) => {
+      sortedEntries.forEach((entry) => {
         const li = document.createElement('li');
         const isDir = entry.type === 'directory';
         const path = entryPath(panel, entry.name);
 
         if (panel.id === 'source') {
           const denied = !isDir && isDeniedFile(entry.name);
-          li.className = isDir
-            ? 'entry-row flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium text-gray-900 dark:text-gray-100'
-            : denied
-              ? 'entry-row flex items-center gap-2 px-3 py-2 text-gray-400 dark:text-gray-500'
-              : 'entry-row flex items-center gap-2 px-3 py-2 text-gray-500 dark:text-gray-400';
+          const isSelected = !denied && panel.selectedItems.has(path);
+          const selectedClass = isSelected ? ' bg-blue-50 dark:bg-blue-900/20' : '';
+          const baseRowClass = 'entry-row flex items-center gap-2 px-3 py-2';
+          const hoverClass = 'hover:bg-gray-50 dark:hover:bg-gray-800';
 
+          li.className = isDir
+            ? `${baseRowClass} ${hoverClass}${selectedClass} cursor-pointer font-medium text-gray-900 dark:text-gray-100`
+            : denied
+              ? `${baseRowClass} text-gray-400 dark:text-gray-500`
+              : `${baseRowClass} ${hoverClass}${selectedClass} cursor-pointer text-gray-500 dark:text-gray-400`;
+
+          let checkbox;
           if (!denied) {
-            const checkbox = document.createElement('input');
+            checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.className = 'shrink-0 rounded border-gray-300 dark:border-gray-600';
             checkbox.setAttribute('aria-label', `Select ${entry.name}`);
-            checkbox.checked = panel.selectedItems.has(path);
+            checkbox.checked = isSelected;
             checkbox.addEventListener('click', (e) => e.stopPropagation());
             checkbox.addEventListener('change', () => {
               if (checkbox.checked) panel.selectedItems.add(path);
@@ -517,8 +669,9 @@
               if (path.trim() === '') {
                 panel.selectedItems.delete(path);
               }
+              setRowSelected(li, checkbox.checked);
               updateSelectedSummary(panel);
-              updateCopyButtonState();
+              updateActionButtonState();
             });
             li.appendChild(checkbox);
           } else {
@@ -533,20 +686,76 @@
           li.appendChild(iconSpan);
 
           const label = document.createElement('span');
-          label.className = isDir ? 'flex-1 cursor-pointer' : denied ? 'flex-1 italic' : 'flex-1';
+          label.className = denied ? 'flex-1 italic min-w-0 truncate' : 'flex-1 min-w-0 truncate';
           label.textContent = denied ? `${entry.name} (not copyable)` : entry.name;
-          if (isDir) {
-            label.addEventListener('click', () => navigatePanel(panel, path));
-          }
           li.appendChild(label);
-        } else {
-          li.className = isDir
-            ? 'entry-row flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 font-medium text-gray-900 dark:text-gray-100'
-            : 'entry-row flex items-center gap-2 px-3 py-2 text-gray-500 dark:text-gray-400';
-          li.innerHTML = `${isDir ? FOLDER_SVG : FILE_SVG}<span>${escapeHtml(entry.name)}</span>`;
-          if (isDir) {
-            li.addEventListener('click', () => navigatePanel(panel, path));
+
+          if (!denied) {
+            const toggleSelection = () => {
+              if (panel.selectedItems.has(path)) {
+                panel.selectedItems.delete(path);
+              } else if (path.trim() !== '') {
+                panel.selectedItems.add(path);
+              }
+              checkbox.checked = panel.selectedItems.has(path);
+              setRowSelected(li, checkbox.checked);
+              updateSelectedSummary(panel);
+              updateActionButtonState();
+            };
+
+            bindRowSelectAndOpen(li, {
+              onSelect: toggleSelection,
+              onOpen: isDir ? () => navigatePanel(panel, path) : undefined,
+            });
+
+            if (isDir) {
+              li.appendChild(createOpenButton(entry.name, () => navigatePanel(panel, path)));
+            }
           }
+        } else if (isDir) {
+          const isSelected = panel.selectedPath === path;
+          li.className = `entry-row flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 font-medium text-gray-900 dark:text-gray-100${isSelected ? ' bg-blue-50 dark:bg-blue-900/20' : ''}`;
+
+          const radio = document.createElement('input');
+          radio.type = 'radio';
+          radio.name = 'dest-selection';
+          radio.className = 'shrink-0 border-gray-300 dark:border-gray-600';
+          radio.setAttribute('aria-label', `Select ${entry.name} as destination`);
+          radio.checked = isSelected;
+          radio.addEventListener('click', (e) => e.stopPropagation());
+          radio.addEventListener('change', () => selectDestination(panel, path));
+          li.appendChild(radio);
+
+          const iconSpan = document.createElement('span');
+          iconSpan.innerHTML = FOLDER_SVG;
+          li.appendChild(iconSpan);
+
+          const label = document.createElement('span');
+          label.className = 'flex-1 min-w-0 truncate';
+          label.textContent = entry.name;
+          li.appendChild(label);
+
+          bindRowSelectAndOpen(li, {
+            onSelect: () => selectDestination(panel, path),
+            onOpen: () => navigatePanel(panel, path),
+          });
+
+          li.appendChild(createOpenButton(entry.name, () => navigatePanel(panel, path)));
+        } else {
+          li.className = 'entry-row flex items-center gap-2 px-3 py-2 text-gray-500 dark:text-gray-400';
+          const spacer = document.createElement('span');
+          spacer.className = 'w-4 shrink-0';
+          spacer.setAttribute('aria-hidden', 'true');
+          li.appendChild(spacer);
+
+          const iconSpan = document.createElement('span');
+          iconSpan.innerHTML = FILE_SVG;
+          li.appendChild(iconSpan);
+
+          const label = document.createElement('span');
+          label.className = 'flex-1';
+          label.textContent = entry.name;
+          li.appendChild(label);
         }
 
         list.appendChild(li);
@@ -563,6 +772,26 @@
       const dot = name.lastIndexOf('.');
       if (dot < 0) return false;
       return name.slice(dot).toLowerCase() === '.lock';
+    }
+
+    function applyApiSelection(panel, selection) {
+      if (!Array.isArray(selection) || !selection.length) {
+        return;
+      }
+
+      if (panel.id === 'source') {
+        selection.forEach((item) => {
+          if (typeof item === 'string' && item.trim() !== '') {
+            panel.selectedItems.add(item);
+          }
+        });
+        return;
+      }
+
+      const path = selection.find((item) => typeof item === 'string' && item.trim() !== '');
+      if (path) {
+        panel.selectedPath = path;
+      }
     }
 
     async function fetchBrowse(panel, root) {
@@ -588,12 +817,14 @@
         panel.currentRoot = data.path ?? '';
         panel.parent = data.parent ?? '';
         panel.currentEntries = data.entries || [];
+        applyApiSelection(panel, data.selection);
         renderBreadcrumb(panel, panel.currentRoot);
         renderEntries(panel, panel.currentEntries);
         if (panel.id === 'destination') {
-          renderDestFolderCheckbox(panel);
-          updateSelectedSummary(panel);
+          renderDestCurrentFolderRadio(panel);
         }
+        updateSelectedSummary(panel);
+        updateActionButtonState();
         return true;
       } catch (err) {
         showPanelError(panel, 'Failed to load directory listing');
@@ -622,16 +853,12 @@
       container.innerHTML = '';
 
       if (!ignoreList.length) {
-        const empty = document.createElement('p');
-        empty.className = 'text-sm text-gray-500 dark:text-gray-400 m-0';
-        empty.textContent = 'No ignored directories.';
-        container.appendChild(empty);
         return;
       }
 
       ignoreList.forEach((name) => {
         const chip = document.createElement('span');
-        chip.className = 'inline-flex items-center gap-1 px-2 py-1 text-sm rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
+        chip.className = 'inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
         chip.innerHTML = `<span>${escapeHtml(name)}</span>`;
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
@@ -660,62 +887,69 @@
     }
 
     const COPY_BTN_ENABLED =
-      'px-6 py-2 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none';
-    const COPY_BTN_DISABLED =
-      'px-6 py-2 rounded text-sm font-medium bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed';
+      'w-full px-4 py-2.5 rounded-md text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none';
+    const MOVE_BTN_ENABLED =
+      'w-full px-4 py-2.5 rounded-md text-sm font-semibold bg-slate-700 text-white hover:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-slate-600 dark:hover:bg-slate-500';
+    const ACTION_BTN_DISABLED =
+      'w-full px-4 py-2.5 rounded-md text-sm font-semibold bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed';
 
-    function updateCopyButtonState() {
-      const btn = document.getElementById('btn-start-copy');
+    function updateActionButtonState() {
       const enabled = selectedPairId && panels.source && panels.destination &&
         panels.source.selectedItems.size > 0 &&
-        panels.destination.els.useFolder.checked;
+        panels.destination.selectedPath !== '';
 
-      if (enabled) {
-        btn.disabled = false;
-        btn.className = COPY_BTN_ENABLED;
-      } else {
-        btn.disabled = true;
-        btn.className = COPY_BTN_DISABLED;
-      }
+      const copyBtn = document.getElementById('btn-start-copy');
+      const moveBtn = document.getElementById('btn-start-move');
+      copyBtn.disabled = !enabled;
+      moveBtn.disabled = !enabled;
+      copyBtn.className = enabled ? COPY_BTN_ENABLED : ACTION_BTN_DISABLED;
+      moveBtn.className = enabled ? MOVE_BTN_ENABLED : ACTION_BTN_DISABLED;
     }
 
-    function showCopyStatus(message, isError) {
-      const el = document.getElementById('copy-status');
+    function showTransferStatus(message, isError) {
+      const el = document.getElementById('transfer-status');
       el.textContent = message;
       el.className = isError
-        ? 'text-sm text-red-600 dark:text-red-400 mt-2 mb-0'
-        : 'text-sm text-green-700 dark:text-green-400 mt-2 mb-0';
+        ? 'text-xs text-center text-red-600 dark:text-red-400 m-0 min-h-[2.5rem]'
+        : 'text-xs text-center text-green-700 dark:text-green-400 m-0 min-h-[2.5rem]';
     }
 
-    async function startCopy() {
-      const btn = document.getElementById('btn-start-copy');
+    async function startTransfer(action) {
+      const isCopy = action === 'copy';
+      const btn = document.getElementById(isCopy ? 'btn-start-copy' : 'btn-start-move');
+      const otherBtn = document.getElementById(isCopy ? 'btn-start-move' : 'btn-start-copy');
       const sources = [...panels.source.selectedItems].filter((p) => p.trim() !== '');
-      const destination = panels.destination.els.useFolder.checked
-        ? panels.destination.currentRoot
-        : '';
+      const destination = panels.destination.selectedPath;
+      const verb = isCopy ? 'copy' : 'move';
+      const verbIng = isCopy ? 'Copying' : 'Moving';
+      const verbPast = isCopy ? 'Copied' : 'Moved';
+      const fileCountKey = isCopy ? 'copiedFiles' : 'movedFiles';
+      const dirCountKey = isCopy ? 'copiedDirectories' : 'movedDirectories';
 
       if (!selectedPairId) {
-        showCopyStatus('Select a directory pair first', true);
+        showTransferStatus('Select a directory pair first', true);
         return;
       }
 
       if (!sources.length) {
-        showCopyStatus('No source items selected', true);
+        showTransferStatus('No source items selected', true);
         return;
       }
 
-      if (!panels.destination.els.useFolder.checked) {
-        showCopyStatus('Select a destination folder', true);
+      if (!destination) {
+        showTransferStatus('Select a destination folder', true);
         return;
       }
 
       btn.disabled = true;
-      btn.className = COPY_BTN_DISABLED;
-      btn.textContent = 'Copying…';
-      showCopyStatus('', false);
+      otherBtn.disabled = true;
+      btn.className = ACTION_BTN_DISABLED;
+      otherBtn.className = ACTION_BTN_DISABLED;
+      btn.textContent = isCopy ? 'Copying…' : 'Moving…';
+      showTransferStatus('', false);
 
       try {
-        const response = await fetch(`${API_BASE_URL}/copy`, {
+        const response = await fetch(`${API_BASE_URL}/${verb}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -728,27 +962,37 @@
         const data = await response.json();
 
         if (!response.ok) {
-          showCopyStatus(data.message || `Copy failed (${response.status})`, true);
+          showTransferStatus(data.message || `${verbIng} failed (${response.status})`, true);
           return;
         }
 
         const destLabel = data.destination || destination;
-        let status = `Copied ${data.copiedFiles} file${data.copiedFiles === 1 ? '' : 's'} and ${data.copiedDirectories} folder${data.copiedDirectories === 1 ? '' : 's'} into ${destLabel}.`;
+        const fileCount = data[fileCountKey] ?? 0;
+        const dirCount = data[dirCountKey] ?? 0;
+        let status = `${verbPast} ${fileCount} file${fileCount === 1 ? '' : 's'} and ${dirCount} folder${dirCount === 1 ? '' : 's'} into ${destLabel}.`;
         if (data.skipped?.length) {
           status += ` Skipped ${data.skipped.length} ignored folder${data.skipped.length === 1 ? '' : 's'}.`;
         }
-        showCopyStatus(status, false);
+        showTransferStatus(status, false);
         panels.source.selectedItems.clear();
         updateSelectedSummary(panels.source);
-        updateCopyButtonState();
+        updateActionButtonState();
         refreshAllPanels();
       } catch (err) {
-        showCopyStatus('Failed to start copy', true);
+        showTransferStatus(`Failed to start ${verb}`, true);
         console.error(err);
       } finally {
-        btn.textContent = 'Start copy';
-        updateCopyButtonState();
+        btn.textContent = isCopy ? 'Copy →' : 'Move →';
+        updateActionButtonState();
       }
+    }
+
+    async function startCopy() {
+      return startTransfer('copy');
+    }
+
+    async function startMove() {
+      return startTransfer('move');
     }
 
     function init() {
@@ -757,13 +1001,13 @@
 
       panels.source.els.selectAll.addEventListener('click', () => selectAllInPanel(panels.source));
       panels.source.els.unselectAll.addEventListener('click', () => unselectAllInPanel(panels.source));
+      panels.source.els.sortSelect.value = panels.source.sortOrder;
+      panels.source.els.sortSelect.addEventListener('change', () => onPanelSortChange(panels.source));
+      panels.destination.els.sortSelect.value = panels.destination.sortOrder;
+      panels.destination.els.sortSelect.addEventListener('change', () => onPanelSortChange(panels.destination));
 
-      panels.destination.els.useFolder.addEventListener('change', (e) => {
-        panels.destination.selectedPath = e.target.checked
-          ? panels.destination.currentRoot
-          : '';
-        updateSelectedSummary(panels.destination);
-        updateCopyButtonState();
+      panels.destination.els.currentFolderRadio.addEventListener('change', () => {
+        selectDestination(panels.destination, panels.destination.currentRoot);
       });
 
       panels.source.els.section.addEventListener('focusin', () => setActivePanel('source'));
@@ -787,10 +1031,11 @@
       });
 
       document.getElementById('btn-start-copy').addEventListener('click', startCopy);
+      document.getElementById('btn-start-move').addEventListener('click', startMove);
       document.getElementById('pair-select').addEventListener('change', onPairChange);
 
       renderIgnoreChips();
-      updateCopyButtonState();
+      updateActionButtonState();
       setActivePanel('source');
 
       loadDirectoryPairs()

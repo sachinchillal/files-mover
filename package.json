@@ -30,6 +30,7 @@
   "author": "sachin chillal",
   "license": "ISC",
   "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.0.10",
@@ -42,6 +43,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "adm-zip": "^0.5.18",
     "dotenv": "^17.4.2",
     "express": "^5.2.1"
   }

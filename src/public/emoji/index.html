@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emoji Browser</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
+  <style>
+    html {
+      background-color: #fff;
+      color: #111827;
+    }
+
+    html.dark {
+      background-color: #111827;
+      color: #e5e7eb;
+    }
+
+    body {
+      background-color: inherit;
+      color: inherit;
+    }
+
+    .emoji-card:focus-visible {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+    }
+
+    #detail-modal:not(.hidden) {
+      display: flex;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+  <div class="w-full max-w-6xl mx-auto px-4 py-6 box-border">
+    <header class="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div class="flex items-center gap-3">
+        <a href="/" class="text-blue-600 dark:text-blue-400 no-underline text-sm hover:underline">← Files Mover</a>
+        <h1 class="text-2xl font-bold m-0">Emoji Browser</h1>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" id="btn-light"
+          class="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Light</button>
+        <button type="button" id="btn-dark"
+          class="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Dark</button>
+      </div>
+    </header>
+
+    <div id="status" class="mb-4 text-sm text-gray-600 dark:text-gray-400" role="status" aria-live="polite">
+      Loading emojis…
+    </div>
+
+    <div id="controls" class="hidden mb-4 space-y-3">
+      <label class="block">
+        <span class="sr-only">Search emojis</span>
+        <input type="search" id="search" placeholder="Search by name…"
+          class="w-full max-w-md px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+      </label>
+      <div id="category-filters" class="flex flex-wrap gap-2" role="group" aria-label="Filter by category"></div>
+    </div>
+
+    <div id="grid"
+      class="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-2 sm:grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))]">
+    </div>
+
+    <p id="empty" class="hidden text-center text-gray-500 dark:text-gray-400 py-12">No emojis match your search.</p>
+  </div>
+
+  <div id="detail-modal"
+    class="hidden fixed inset-0 z-50 items-center justify-center p-4 bg-black/50"
+    role="dialog" aria-modal="true" aria-labelledby="detail-title" hidden>
+    <div
+      class="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
+      <div class="flex items-start justify-between gap-3 p-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex items-center gap-3 min-w-0">
+          <img id="detail-preview" src="" alt="" width="48" height="48"
+            class="w-12 h-12 object-contain shrink-0" />
+          <div class="min-w-0">
+            <h2 id="detail-title" class="text-lg font-semibold m-0 truncate"></h2>
+            <p id="detail-text" class="text-2xl m-0 mt-1"></p>
+          </div>
+        </div>
+        <button type="button" id="detail-close"
+          class="shrink-0 px-2 py-1 text-xl leading-none rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          aria-label="Close">×</button>
+      </div>
+      <dl id="detail-props" class="p-4 space-y-3 m-0"></dl>
+      <div class="flex gap-2 p-4 pt-0">
+        <button type="button" id="detail-copy-emoji"
+          class="flex-1 px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          Copy emoji
+        </button>
+        <button type="button" id="detail-copy-json"
+          class="flex-1 px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          Copy JSON
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = '/api/emojis';
+
+    const statusEl = document.getElementById('status');
+    const controlsEl = document.getElementById('controls');
+    const searchEl = document.getElementById('search');
+    const categoryFiltersEl = document.getElementById('category-filters');
+    const gridEl = document.getElementById('grid');
+    const emptyEl = document.getElementById('empty');
+    const detailModalEl = document.getElementById('detail-modal');
+    const detailTitleEl = document.getElementById('detail-title');
+    const detailTextEl = document.getElementById('detail-text');
+    const detailPreviewEl = document.getElementById('detail-preview');
+    const detailPropsEl = document.getElementById('detail-props');
+    const detailCloseEl = document.getElementById('detail-close');
+    const detailCopyEmojiEl = document.getElementById('detail-copy-emoji');
+    const detailCopyJsonEl = document.getElementById('detail-copy-json');
+
+    let allEmojis = [];
+    let activeCategory = 'all';
+    let searchQuery = '';
+    let selectedEmoji = null;
+    let lastFocusedEl = null;
+
+    const EMOJI_PROPS = ['id', 'text', 'name', 'slug', 'category', 'cdn_url'];
+
+    function applyTheme(theme) {
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+      localStorage.setItem('theme', theme);
+    }
+
+    document.getElementById('btn-light').addEventListener('click', () => applyTheme('light'));
+    document.getElementById('btn-dark').addEventListener('click', () => applyTheme('dark'));
+    applyTheme(localStorage.getItem('theme') || 'light');
+
+    function titleCase(str) {
+      return str.replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
+    function getFilteredEmojis() {
+      const q = searchQuery.trim().toLowerCase();
+      return allEmojis.filter((emoji) => {
+        if (activeCategory !== 'all' && emoji.category !== activeCategory) return false;
+        if (!q) return true;
+        return emoji.name.includes(q) || emoji.slug.includes(q.replace(/\s+/g, '-'));
+      });
+    }
+
+    function renderGrid() {
+      const filtered = getFilteredEmojis();
+      gridEl.replaceChildren();
+      emptyEl.classList.toggle('hidden', filtered.length > 0);
+
+      const fragment = document.createDocumentFragment();
+      for (const emoji of filtered) {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className =
+          'emoji-card flex flex-col items-center gap-1 p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors text-left';
+        card.title = `View details — ${emoji.name}`;
+        card.setAttribute('aria-label', `View details for ${emoji.name}`);
+
+        const img = document.createElement('img');
+        img.src = emoji.cdn_url;
+        img.alt = '';
+        img.width = 36;
+        img.height = 36;
+        img.className = 'w-9 h-9 object-contain';
+        img.loading = 'lazy';
+        img.decoding = 'async';
+
+        const label = document.createElement('span');
+        label.className = 'text-[10px] leading-tight text-center text-gray-600 dark:text-gray-400 line-clamp-2 w-full';
+        label.textContent = emoji.name;
+
+        card.append(img, label);
+        card.addEventListener('click', () => showEmojiDetail(emoji));
+        fragment.appendChild(card);
+      }
+      gridEl.appendChild(fragment);
+
+      statusEl.textContent =
+        filtered.length === allEmojis.length
+          ? `${allEmojis.length} emojis`
+          : `${filtered.length} of ${allEmojis.length} emojis`;
+    }
+
+    async function copyToClipboard(value, feedbackEl, feedbackText = 'Copied!') {
+      try {
+        await navigator.clipboard.writeText(value);
+        if (feedbackEl) {
+          const prev = feedbackEl.textContent;
+          feedbackEl.textContent = feedbackText;
+          setTimeout(() => {
+            feedbackEl.textContent = prev;
+          }, 1000);
+        }
+        return true;
+      } catch {
+        statusEl.textContent = 'Copy failed';
+        return false;
+      }
+    }
+
+    function renderPropRow(key, value) {
+      const row = document.createElement('div');
+      row.className = 'flex flex-col gap-1';
+
+      const dt = document.createElement('dt');
+      dt.className = 'text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400';
+      dt.textContent = key;
+
+      const dd = document.createElement('dd');
+      dd.className = 'm-0 flex items-start gap-2';
+
+      const valueEl = document.createElement('code');
+      valueEl.className =
+        'flex-1 text-sm break-all rounded px-2 py-1 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100';
+      if (key === 'cdn_url') {
+        const link = document.createElement('a');
+        link.href = value;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.className = 'text-blue-600 dark:text-blue-400 hover:underline break-all';
+        link.textContent = value;
+        valueEl.replaceChildren(link);
+      } else {
+        valueEl.textContent = value;
+      }
+
+      const copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className =
+        'shrink-0 px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none';
+      copyBtn.textContent = 'Copy';
+      copyBtn.addEventListener('click', () => copyToClipboard(value, copyBtn));
+
+      dd.append(valueEl, copyBtn);
+      row.append(dt, dd);
+      return row;
+    }
+
+    function showEmojiDetail(emoji) {
+      selectedEmoji = emoji;
+      lastFocusedEl = document.activeElement;
+
+      detailTitleEl.textContent = emoji.name;
+      detailTextEl.textContent = emoji.text;
+      detailPreviewEl.src = emoji.cdn_url;
+      detailPreviewEl.alt = emoji.name;
+
+      detailPropsEl.replaceChildren();
+      for (const key of EMOJI_PROPS) {
+        detailPropsEl.appendChild(renderPropRow(key, emoji[key]));
+      }
+
+      detailModalEl.hidden = false;
+      detailModalEl.classList.remove('hidden');
+      detailCloseEl.focus();
+    }
+
+    function closeEmojiDetail() {
+      detailModalEl.hidden = true;
+      detailModalEl.classList.add('hidden');
+      selectedEmoji = null;
+      if (lastFocusedEl) lastFocusedEl.focus();
+    }
+
+    detailCloseEl.addEventListener('click', closeEmojiDetail);
+    detailModalEl.addEventListener('click', (e) => {
+      if (e.target === detailModalEl) closeEmojiDetail();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !detailModalEl.hidden) closeEmojiDetail();
+    });
+
+    detailCopyEmojiEl.addEventListener('click', () => {
+      if (selectedEmoji) copyToClipboard(selectedEmoji.text, detailCopyEmojiEl, 'Copied!');
+    });
+    detailCopyJsonEl.addEventListener('click', () => {
+      if (selectedEmoji) copyToClipboard(JSON.stringify(selectedEmoji, null, 2), detailCopyJsonEl, 'Copied!');
+    });
+
+    function renderCategoryFilters(categories) {
+      categoryFiltersEl.replaceChildren();
+
+      const allBtn = document.createElement('button');
+      allBtn.type = 'button';
+      allBtn.dataset.category = 'all';
+      allBtn.textContent = 'All';
+      allBtn.className = categoryBtnClass(true);
+      categoryFiltersEl.appendChild(allBtn);
+
+      for (const cat of categories) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.category = cat;
+        btn.textContent = titleCase(cat);
+        btn.className = categoryBtnClass(false);
+        categoryFiltersEl.appendChild(btn);
+      }
+
+      categoryFiltersEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-category]');
+        if (!btn) return;
+        activeCategory = btn.dataset.category;
+        for (const b of categoryFiltersEl.querySelectorAll('button[data-category]')) {
+          b.className = categoryBtnClass(b.dataset.category === activeCategory);
+        }
+        renderGrid();
+      });
+    }
+
+    function categoryBtnClass(active) {
+      const base =
+        'px-3 py-1 text-xs rounded-full border focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors';
+      return active
+        ? `${base} border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500`
+        : `${base} border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700`;
+    }
+
+    searchEl.addEventListener('input', () => {
+      searchQuery = searchEl.value;
+      renderGrid();
+    });
+
+    async function init() {
+      try {
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        allEmojis = json.data.emojis.edges.map((edge) => edge.node);
+
+        const categories = [...new Set(allEmojis.map((e) => e.category))].sort();
+        controlsEl.classList.remove('hidden');
+        renderCategoryFilters(categories);
+        renderGrid();
+      } catch (err) {
+        statusEl.textContent = `Failed to load emojis: ${err.message}`;
+        statusEl.classList.add('text-red-600', 'dark:text-red-400');
+      }
+    }
+
+    init();
+  </script>
+</body>
+
+</html>

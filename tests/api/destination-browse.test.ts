@@ -15,6 +15,7 @@ describe(`GET ${API_BASE_URL}destination/browse`, () => {
     const folderPath = path.join(DESTINATION_TEST_DIR, sampleFolder);
     fs.mkdirSync(folderPath, { recursive: true });
     fs.writeFileSync(path.join(folderPath, 'readme.md'), '# readme\n', 'utf8');
+    fs.writeFileSync(path.join(DESTINATION_TEST_DIR, 'notes.txt'), 'notes\n', 'utf8');
     writeTestSettings(SOURCE_TEST_DIR, DESTINATION_TEST_DIR);
   });
 
@@ -23,6 +24,7 @@ describe(`GET ${API_BASE_URL}destination/browse`, () => {
 
     expect(res.status).toBe(200);
     expect(res.body.path).toBe('');
+    expect(res.body.selection).toEqual([]);
     expect(res.body.entries).toEqual(
       expect.arrayContaining([{ name: sampleFolder, type: 'directory' }])
     );
@@ -35,9 +37,59 @@ describe(`GET ${API_BASE_URL}destination/browse`, () => {
 
     expect(res.status).toBe(200);
     expect(res.body.path).toBe(sampleFolder);
+    expect(res.body.selection).toEqual([]);
     expect(res.body.entries).toEqual(
       expect.arrayContaining([{ name: 'readme.md', type: 'file' }])
     );
+  });
+
+  it('shows only whitelisted names when whitelist is configured', async () => {
+    writeTestSettings(SOURCE_TEST_DIR, DESTINATION_TEST_DIR, undefined, undefined, {
+      destinationFilters: { whitelist: [sampleFolder] },
+    });
+
+    const res = await request(app).get(withPairQuery(`${API_BASE_URL}destination/browse`));
+
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toEqual([{ name: sampleFolder, type: 'directory' }]);
+    expect(res.body.selection).toEqual([]);
+  });
+
+  it('hides blacklisted names from settings', async () => {
+    writeTestSettings(SOURCE_TEST_DIR, DESTINATION_TEST_DIR, undefined, undefined, {
+      destinationFilters: { blacklist: [sampleFolder] },
+    });
+
+    const res = await request(app).get(withPairQuery(`${API_BASE_URL}destination/browse`));
+
+    expect(res.status).toBe(200);
+    const names = res.body.entries.map((e: { name: string }) => e.name);
+    expect(names).not.toContain(sampleFolder);
+    expect(res.body.selection).toEqual([]);
+  });
+
+  it('returns explicit selection paths from settings', async () => {
+    writeTestSettings(SOURCE_TEST_DIR, DESTINATION_TEST_DIR, undefined, undefined, {
+      destinationFilters: { selection: [sampleFolder] },
+    });
+
+    const res = await request(app).get(withPairQuery(`${API_BASE_URL}destination/browse`));
+
+    expect(res.status).toBe(200);
+    expect(res.body.selection).toEqual([sampleFolder]);
+  });
+
+  it('selects current folder when selection contains * inside a directory', async () => {
+    writeTestSettings(SOURCE_TEST_DIR, DESTINATION_TEST_DIR, undefined, undefined, {
+      destinationFilters: { selection: ['*'] },
+    });
+
+    const res = await request(app).get(
+      withPairQuery(`${API_BASE_URL}destination/browse?root=${sampleFolder}`)
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.selection).toEqual([sampleFolder]);
   });
 
   it('returns 400 for path traversal with ..', async () => {

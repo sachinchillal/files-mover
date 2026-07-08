@@ -55,6 +55,12 @@
       aria-label="Add directory pair">
       <h2 class="text-lg font-semibold m-0 mb-3 text-gray-900 dark:text-gray-100">Add directory pair</h2>
       <form id="add-form" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label class="block md:col-span-2">
+          <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Title</span>
+          <input type="text" id="add-title" required
+            class="mt-1 w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            placeholder="e.g. Main project sync" />
+        </label>
         <label class="block">
           <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Source path</span>
           <input type="text" id="add-source" required
@@ -121,9 +127,15 @@
     }
 
     function pairLabel(pair) {
-      const sourceName = pair.source.split(/[/\\]/).filter(Boolean).pop() || pair.source;
-      const destName = pair.destination.split(/[/\\]/).filter(Boolean).pop() || pair.destination;
-      return `${sourceName} → ${destName}`;
+      return pair.title || pair.source.path;
+    }
+
+    function emptyLocationLists() {
+      return { whitelist: [], blacklist: [], selection: [] };
+    }
+
+    function makeLocation(path) {
+      return { path, ...emptyLocationLists() };
     }
 
     function inputClass() {
@@ -151,13 +163,17 @@
           card.innerHTML = `
             <h3 class="text-sm font-semibold m-0 mb-3 text-gray-900 dark:text-gray-100">Edit pair</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label class="block md:col-span-2">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Title</span>
+                <input type="text" class="edit-title mt-1 ${inputClass()}" value="${escapeAttr(pair.title || '')}" required />
+              </label>
               <label class="block">
                 <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Source path</span>
-                <input type="text" class="edit-source mt-1 ${inputClass()}" value="${escapeAttr(pair.source)}" />
+                <input type="text" class="edit-source mt-1 ${inputClass()}" value="${escapeAttr(pair.source.path)}" />
               </label>
               <label class="block">
                 <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Destination path</span>
-                <input type="text" class="edit-destination mt-1 ${inputClass()}" value="${escapeAttr(pair.destination)}" />
+                <input type="text" class="edit-destination mt-1 ${inputClass()}" value="${escapeAttr(pair.destination.path)}" />
               </label>
             </div>
             <div class="flex flex-wrap gap-2 mt-3">
@@ -179,11 +195,11 @@
                 <dl class="m-0 space-y-1 text-sm">
                   <div>
                     <dt class="inline font-medium text-gray-600 dark:text-gray-400">Source: </dt>
-                    <dd class="inline break-all text-gray-900 dark:text-gray-100">${escapeHtml(pair.source)}</dd>
+                    <dd class="inline break-all text-gray-900 dark:text-gray-100">${escapeHtml(pair.source.path)}</dd>
                   </div>
                   <div>
                     <dt class="inline font-medium text-gray-600 dark:text-gray-400">Destination: </dt>
-                    <dd class="inline break-all text-gray-900 dark:text-gray-100">${escapeHtml(pair.destination)}</dd>
+                    <dd class="inline break-all text-gray-900 dark:text-gray-100">${escapeHtml(pair.destination.path)}</dd>
                   </div>
                 </dl>
               </div>
@@ -229,8 +245,9 @@
 
     async function addPair(event) {
       event.preventDefault();
-      const source = document.getElementById('add-source').value.trim();
-      const destination = document.getElementById('add-destination').value.trim();
+      const title = document.getElementById('add-title').value.trim();
+      const sourcePath = document.getElementById('add-source').value.trim();
+      const destinationPath = document.getElementById('add-destination').value.trim();
       const submit = document.getElementById('add-submit');
 
       submit.disabled = true;
@@ -240,7 +257,11 @@
         const response = await fetch(`${API_BASE_URL}/settings/directories`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ source, destination }),
+          body: JSON.stringify({
+            title,
+            source: makeLocation(sourcePath),
+            destination: makeLocation(destinationPath),
+          }),
         });
         const data = await response.json();
         if (!response.ok) {
@@ -261,14 +282,20 @@
     }
 
     async function saveEdit(id, card) {
-      const source = card.querySelector('.edit-source').value.trim();
-      const destination = card.querySelector('.edit-destination').value.trim();
+      const title = card.querySelector('.edit-title').value.trim();
+      const sourcePath = card.querySelector('.edit-source').value.trim();
+      const destinationPath = card.querySelector('.edit-destination').value.trim();
+      const existing = pairs.find((pair) => pair.id === id);
 
       try {
         const response = await fetch(`${API_BASE_URL}/settings/directories/${encodeURIComponent(id)}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ source, destination }),
+          body: JSON.stringify({
+            title,
+            source: { ...existing.source, path: sourcePath },
+            destination: { ...existing.destination, path: destinationPath },
+          }),
         });
         const data = await response.json();
         if (!response.ok) {

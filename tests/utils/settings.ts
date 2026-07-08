@@ -1,17 +1,49 @@
 import fs from 'fs';
 import path from 'path';
-import type { DirectoryPair } from '../../src/types';
+import type { DirectoryLocation, DirectoryPair } from '../../src/types';
 
 export const TEST_PAIR_ID = 'test-pair-id';
+export const TEST_PAIR_TITLE = 'Test pair';
 export const TEST_SETTINGS_PATH = path.join(__dirname, '../data/test-settings.json');
+
+export type LocationFilterOverrides = Partial<
+  Pick<DirectoryLocation, 'whitelist' | 'blacklist' | 'selection'>
+>;
+
+export type WriteTestSettingsOptions = {
+  sourceFilters?: LocationFilterOverrides;
+  destinationFilters?: LocationFilterOverrides;
+};
+
+export const makeLocation = (
+  locationPath: string,
+  overrides: LocationFilterOverrides = {}
+): DirectoryLocation => ({
+  path: path.resolve(locationPath),
+  whitelist: overrides.whitelist ?? [],
+  blacklist: overrides.blacklist ?? [],
+  selection: overrides.selection ?? [],
+});
 
 export const writeTestSettings = (
   source: string,
   destination: string,
-  id: string = TEST_PAIR_ID
+  id: string = TEST_PAIR_ID,
+  title: string = TEST_PAIR_TITLE,
+  options: WriteTestSettingsOptions = {}
 ): string => {
+  const now = Date.now();
   const data = {
-    directories: [{ id, source: path.resolve(source), destination: path.resolve(destination) }],
+    directories: [
+      {
+        id,
+        title,
+        source: makeLocation(source, options.sourceFilters),
+        destination: makeLocation(destination, options.destinationFilters),
+        createdAt: now,
+        updatedAt: now,
+      },
+    ],
   };
   fs.mkdirSync(path.dirname(TEST_SETTINGS_PATH), { recursive: true });
   fs.writeFileSync(TEST_SETTINGS_PATH, `${JSON.stringify(data, null, 2)}\n`, 'utf8');

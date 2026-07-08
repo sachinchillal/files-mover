@@ -65,7 +65,12 @@ describe(`POST ${API_BASE_URL}copy`, () => {
     expect(fs.existsSync(path.join(DESTINATION_TEST_DIR, 'backups/app/package.json'))).toBe(true);
     expect(fs.existsSync(path.join(DESTINATION_TEST_DIR, 'backups/app/src/index.ts'))).toBe(true);
 
-    const browse = browseDestinationTree(DESTINATION_TEST_DIR, 'backups/app', new Set());
+    const browse = browseDestinationTree(DESTINATION_TEST_DIR, 'backups/app', {
+      whitelist: [],
+      blacklist: [],
+      selection: [],
+      ignoreNames: new Set(),
+    });
     expect(browse.entries).toEqual(
       expect.arrayContaining([
         { name: 'src', type: 'directory' },
@@ -94,7 +99,12 @@ describe(`POST ${API_BASE_URL}copy`, () => {
     expect(fs.existsSync(path.join(DESTINATION_TEST_DIR, 'backups/app/node_modules'))).toBe(false);
     expect(fs.existsSync(path.join(DESTINATION_TEST_DIR, 'backups/app/.git'))).toBe(false);
 
-    const browse = browseDestinationTree(DESTINATION_TEST_DIR, 'backups/app', new Set());
+    const browse = browseDestinationTree(DESTINATION_TEST_DIR, 'backups/app', {
+      whitelist: [],
+      blacklist: [],
+      selection: [],
+      ignoreNames: new Set(),
+    });
     const names = browse.entries.map((e) => e.name);
     expect(names).not.toContain('node_modules');
     expect(names).not.toContain('.git');

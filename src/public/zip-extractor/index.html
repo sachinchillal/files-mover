@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zip Extractor - Files Mover</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
+  <style>
+    html {
+      background-color: #fff;
+      color: #111827;
+    }
+
+    html.dark {
+      background-color: #111827;
+      color: #e5e7eb;
+    }
+
+    body {
+      background-color: inherit;
+      color: inherit;
+    }
+
+    .browser-panel {
+      min-height: 20rem;
+    }
+
+    .entry-row:focus-visible {
+      outline: 2px solid #2563eb;
+      outline-offset: -2px;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+  <div class="w-full max-w-4xl mx-auto px-4 py-6 box-border">
+    <header class="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div class="flex items-center gap-3">
+        <a href="/" class="text-blue-600 dark:text-blue-400 no-underline text-sm hover:underline">← Files Mover</a>
+        <h1 class="text-2xl font-bold m-0">Zip Extractor</h1>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" id="btn-light"
+          class="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Light</button>
+        <button type="button" id="btn-dark"
+          class="px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">Dark</button>
+      </div>
+    </header>
+
+    <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+      Browse a configured source directory, select a <code class="text-xs">.zip</code> file, and extract its contents
+      into the same folder as the archive.
+    </p>
+
+    <section class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 mb-6"
+      aria-label="Directory pair selection">
+      <label for="pair-select" class="text-sm font-medium text-gray-600 dark:text-gray-400">Directory pair</label>
+      <div class="mt-2 flex flex-wrap gap-3 items-center">
+        <select id="pair-select"
+          class="flex-1 min-w-[14rem] px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          <option value="">Loading pairs…</option>
+        </select>
+        <a href="/settings/" class="text-sm text-blue-600 dark:text-blue-400 no-underline hover:underline">Manage pairs</a>
+      </div>
+      <p id="pair-status" class="text-sm text-amber-700 dark:text-amber-400 mt-2 mb-0 hidden" role="status"></p>
+    </section>
+
+    <section id="panel-source"
+      class="browser-panel flex flex-col rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 mb-6"
+      aria-label="Source directory browser">
+      <h2 class="text-lg font-semibold m-0 mb-3 text-gray-900 dark:text-gray-100">Source</h2>
+      <label class="text-sm font-medium text-gray-600 dark:text-gray-400" for="selected-zip-path">Selected zip</label>
+      <input type="text" id="selected-zip-path" readonly
+        class="mt-1 mb-3 w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+        placeholder="Not selected" />
+      <nav id="breadcrumb"
+        class="text-sm mb-2 flex flex-wrap gap-1 items-center text-blue-600 dark:text-blue-400"
+        aria-label="Source path"></nav>
+      <p id="browse-error" class="text-sm text-red-600 dark:text-red-400 hidden mb-2" role="alert"></p>
+      <ul id="entries"
+        class="flex-1 overflow-y-auto max-h-80 border border-gray-200 dark:border-gray-700 rounded divide-y divide-gray-100 dark:divide-gray-800 list-none m-0 p-0">
+      </ul>
+      <p id="loading" class="text-sm text-gray-500 dark:text-gray-400 mt-2 hidden">Loading…</p>
+    </section>
+
+    <section class="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-4 mb-6"
+      aria-label="Extract options">
+      <div class="flex flex-col gap-3 text-left max-w-md mx-auto mb-4">
+        <label for="rename-enabled"
+          class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+          <input type="checkbox" id="rename-enabled"
+            class="shrink-0 rounded border-gray-300 dark:border-gray-600" />
+          <span>Rename extracted folder</span>
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium text-gray-600 dark:text-gray-400">New folder name</span>
+          <input type="text" id="rename-folder" disabled
+            class="mt-1 w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+            placeholder="e.g. my-project" />
+        </label>
+      </div>
+      <div class="text-center">
+        <button type="button" id="btn-extract" disabled
+          class="px-6 py-2 rounded text-sm font-medium bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed">Extract</button>
+        <p id="extract-status" class="text-sm text-gray-500 dark:text-gray-400 mt-2 mb-0" role="status"></p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const API_BASE_URL = '/api';
+    const THEME_KEY = 'files-mover-theme';
+    const PAIR_STORAGE_KEY = 'files-mover-zip-extractor-pair-id';
+    const RENAME_ENABLED_KEY = 'files-mover-zip-rename-enabled';
+    const RENAME_FOLDER_KEY = 'files-mover-zip-rename-folder';
+    const THEME_DARK = 'dark';
+    const THEME_LIGHT = 'light';
+
+    const FOLDER_SVG = '<svg class="w-4 h-4 shrink-0 text-amber-500" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>';
+    const FILE_SVG = '<svg class="w-4 h-4 shrink-0 text-gray-400" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>';
+    const ZIP_SVG = '<svg class="w-4 h-4 shrink-0 text-violet-500" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>';
+
+    const EXTRACT_BTN_ENABLED =
+      'px-6 py-2 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none';
+    const EXTRACT_BTN_DISABLED =
+      'px-6 py-2 rounded text-sm font-medium bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed';
+
+    let directoryPairs = [];
+    let selectedPairId = '';
+    let currentRoot = '';
+    let parent = '';
+    let currentEntries = [];
+    let selectedZip = '';
+    let loading = false;
+
+    const els = {
+      pairSelect: document.getElementById('pair-select'),
+      pairStatus: document.getElementById('pair-status'),
+      selectedZipPath: document.getElementById('selected-zip-path'),
+      breadcrumb: document.getElementById('breadcrumb'),
+      browseError: document.getElementById('browse-error'),
+      entries: document.getElementById('entries'),
+      loading: document.getElementById('loading'),
+      extractBtn: document.getElementById('btn-extract'),
+      extractStatus: document.getElementById('extract-status'),
+      renameEnabled: document.getElementById('rename-enabled'),
+      renameFolder: document.getElementById('rename-folder'),
+    };
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function isZipFile(name) {
+      const dot = name.lastIndexOf('.');
+      if (dot < 0) return false;
+      return name.slice(dot).toLowerCase() === '.zip';
+    }
+
+    function entryPath(name) {
+      return currentRoot ? `${currentRoot}/${name}` : name;
+    }
+
+    function initTheme() {
+      const stored = localStorage.getItem(THEME_KEY);
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = stored === THEME_DARK || stored === THEME_LIGHT
+        ? stored
+        : (prefersDark ? THEME_DARK : THEME_LIGHT);
+      applyTheme(theme);
+      document.getElementById('btn-dark').addEventListener('click', () => applyTheme(THEME_DARK));
+      document.getElementById('btn-light').addEventListener('click', () => applyTheme(THEME_LIGHT));
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.classList.toggle('dark', theme === THEME_DARK);
+      localStorage.setItem(THEME_KEY, theme);
+    }
+
+    function pairLabel(pair) {
+      return pair.title || pair.source.path;
+    }
+
+    function loadSelectedPairId() {
+      return localStorage.getItem(PAIR_STORAGE_KEY) || '';
+    }
+
+    function saveSelectedPairId(pairId) {
+      if (pairId) {
+        localStorage.setItem(PAIR_STORAGE_KEY, pairId);
+      } else {
+        localStorage.removeItem(PAIR_STORAGE_KEY);
+      }
+    }
+
+    function showPairStatus(message) {
+      if (!message) {
+        els.pairStatus.textContent = '';
+        els.pairStatus.classList.add('hidden');
+        return;
+      }
+      els.pairStatus.textContent = message;
+      els.pairStatus.classList.remove('hidden');
+    }
+
+    function showBrowseError(message) {
+      if (!message) {
+        els.browseError.textContent = '';
+        els.browseError.classList.add('hidden');
+        return;
+      }
+      els.browseError.textContent = message;
+      els.browseError.classList.remove('hidden');
+    }
+
+    function setLoading(isLoading) {
+      loading = isLoading;
+      els.loading.classList.toggle('hidden', !isLoading);
+    }
+
+    function updateSelectedZipDisplay() {
+      els.selectedZipPath.value = selectedZip;
+      updateExtractButtonState();
+    }
+
+    function updateExtractButtonState() {
+      const enabled = selectedPairId && selectedZip;
+      els.extractBtn.disabled = !enabled;
+      els.extractBtn.className = enabled ? EXTRACT_BTN_ENABLED : EXTRACT_BTN_DISABLED;
+    }
+
+    function showExtractStatus(message, isError) {
+      els.extractStatus.textContent = message;
+      els.extractStatus.className = isError
+        ? 'text-sm text-red-600 dark:text-red-400 mt-2 mb-0'
+        : 'text-sm text-green-700 dark:text-green-400 mt-2 mb-0';
+    }
+
+    function renderPairSelect() {
+      els.pairSelect.innerHTML = '';
+
+      if (!directoryPairs.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No directory pairs configured';
+        els.pairSelect.appendChild(option);
+        els.pairSelect.disabled = true;
+        selectedPairId = '';
+        showPairStatus('Add a directory pair in Settings before browsing or extracting.');
+        return;
+      }
+
+      els.pairSelect.disabled = false;
+      directoryPairs.forEach((pair) => {
+        const option = document.createElement('option');
+        option.value = pair.id;
+        option.textContent = pairLabel(pair);
+        els.pairSelect.appendChild(option);
+      });
+
+      const stored = loadSelectedPairId();
+      const validStored = directoryPairs.some((pair) => pair.id === stored);
+      selectedPairId = validStored ? stored : directoryPairs[0].id;
+      els.pairSelect.value = selectedPairId;
+      saveSelectedPairId(selectedPairId);
+      showPairStatus('');
+    }
+
+    async function loadDirectoryPairs() {
+      const response = await fetch(`${API_BASE_URL}/settings`);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to load directory pairs');
+      }
+      directoryPairs = Array.isArray(data.directories) ? data.directories : [];
+      renderPairSelect();
+    }
+
+    function buildBrowseUrl(root) {
+      const params = new URLSearchParams();
+      if (selectedPairId) params.set('pairId', selectedPairId);
+      if (root) params.set('root', root);
+      const qs = params.toString();
+      return `${API_BASE_URL}/source/browse${qs ? `?${qs}` : ''}`;
+    }
+
+    function renderBreadcrumb(path) {
+      const nav = els.breadcrumb;
+      nav.innerHTML = '';
+
+      const rootBtn = document.createElement('button');
+      rootBtn.type = 'button';
+      rootBtn.className = 'hover:underline focus:outline-none focus:underline';
+      rootBtn.textContent = '/';
+      rootBtn.addEventListener('click', () => navigate(''));
+      nav.appendChild(rootBtn);
+
+      if (!path) return;
+
+      const segments = path.split('/').filter(Boolean);
+      let accumulated = '';
+      segments.forEach((seg, index) => {
+        nav.appendChild(document.createTextNode(' / '));
+        accumulated = accumulated ? `${accumulated}/${seg}` : seg;
+        const target = accumulated;
+        const isLast = index === segments.length - 1;
+        if (isLast) {
+          const span = document.createElement('span');
+          span.className = 'text-gray-700 dark:text-gray-300';
+          span.textContent = seg;
+          nav.appendChild(span);
+        } else {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'hover:underline focus:outline-none focus:underline';
+          btn.textContent = seg;
+          btn.addEventListener('click', () => navigate(target));
+          nav.appendChild(btn);
+        }
+      });
+    }
+
+    function renderEntries(entries) {
+      const list = els.entries;
+      list.innerHTML = '';
+
+      if (parent !== '' || currentRoot !== '') {
+        const upLi = document.createElement('li');
+        upLi.className = 'entry-row flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 text-blue-600 dark:text-blue-400 font-medium';
+        upLi.innerHTML = `${FOLDER_SVG}<span>.. (parent)</span>`;
+        upLi.addEventListener('click', () => navigate(parent));
+        list.appendChild(upLi);
+      }
+
+      if (!entries.length && currentRoot === '' && (parent === '' || parent === undefined)) {
+        const empty = document.createElement('li');
+        empty.className = 'px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center';
+        empty.textContent = 'This folder is empty.';
+        list.appendChild(empty);
+        return;
+      }
+
+      if (!entries.length) {
+        return;
+      }
+
+      entries.forEach((entry) => {
+        const li = document.createElement('li');
+        const isDir = entry.type === 'directory';
+        const path = entryPath(entry.name);
+        const isZip = !isDir && isZipFile(entry.name);
+
+        if (isDir) {
+          li.className = 'entry-row flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium text-gray-900 dark:text-gray-100';
+          const spacer = document.createElement('span');
+          spacer.className = 'w-4 shrink-0';
+          spacer.setAttribute('aria-hidden', 'true');
+          li.appendChild(spacer);
+
+          const iconSpan = document.createElement('span');
+          iconSpan.innerHTML = FOLDER_SVG;
+          li.appendChild(iconSpan);
+
+          const label = document.createElement('span');
+          label.className = 'flex-1 cursor-pointer';
+          label.textContent = entry.name;
+          label.addEventListener('click', () => navigate(path));
+          li.appendChild(label);
+        } else if (isZip) {
+          li.className = 'entry-row flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800';
+
+          const radio = document.createElement('input');
+          radio.type = 'radio';
+          radio.name = 'zip-selection';
+          radio.className = 'shrink-0 border-gray-300 dark:border-gray-600';
+          radio.setAttribute('aria-label', `Select ${entry.name}`);
+          radio.checked = selectedZip === path;
+          radio.addEventListener('click', (e) => e.stopPropagation());
+          radio.addEventListener('change', () => {
+            selectedZip = path;
+            updateSelectedZipDisplay();
+            renderEntries(currentEntries);
+          });
+          li.appendChild(radio);
+
+          const iconSpan = document.createElement('span');
+          iconSpan.innerHTML = ZIP_SVG;
+          li.appendChild(iconSpan);
+
+          const label = document.createElement('span');
+          label.className = 'flex-1 cursor-pointer';
+          label.textContent = entry.name;
+          label.addEventListener('click', () => {
+            selectedZip = path;
+            updateSelectedZipDisplay();
+            renderEntries(currentEntries);
+          });
+          li.appendChild(label);
+        } else {
+          li.className = 'entry-row flex items-center gap-2 px-3 py-2 text-gray-400 dark:text-gray-500';
+          const spacer = document.createElement('span');
+          spacer.className = 'w-4 shrink-0';
+          spacer.setAttribute('aria-hidden', 'true');
+          li.appendChild(spacer);
+
+          const iconSpan = document.createElement('span');
+          iconSpan.innerHTML = FILE_SVG;
+          li.appendChild(iconSpan);
+
+          const label = document.createElement('span');
+          label.className = 'flex-1 italic';
+          label.textContent = `${entry.name} (not a zip)`;
+          li.appendChild(label);
+        }
+
+        list.appendChild(li);
+      });
+    }
+
+    async function fetchBrowse(root) {
+      if (!selectedPairId) {
+        currentEntries = [];
+        renderEntries([]);
+        showBrowseError('Select a directory pair first');
+        return false;
+      }
+
+      setLoading(true);
+      showBrowseError('');
+
+      try {
+        const response = await fetch(buildBrowseUrl(root));
+        const data = await response.json();
+
+        if (!response.ok) {
+          showBrowseError(data.message || `Request failed (${response.status})`);
+          return false;
+        }
+
+        currentRoot = data.path ?? '';
+        parent = data.parent ?? '';
+        currentEntries = data.entries || [];
+        renderBreadcrumb(currentRoot);
+        renderEntries(currentEntries);
+        return true;
+      } catch (err) {
+        showBrowseError('Failed to load directory listing');
+        console.error(err);
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function navigate(root) {
+      selectedZip = '';
+      updateSelectedZipDisplay();
+      fetchBrowse(root);
+    }
+
+    function onPairChange() {
+      selectedPairId = els.pairSelect.value;
+      saveSelectedPairId(selectedPairId);
+      selectedZip = '';
+      currentRoot = '';
+      updateSelectedZipDisplay();
+      showExtractStatus('', false);
+      if (selectedPairId) {
+        fetchBrowse('');
+      }
+    }
+
+    async function startExtract() {
+      if (!selectedPairId || !selectedZip) {
+        showExtractStatus('Select a zip file first', true);
+        return;
+      }
+
+      const renameRequested = els.renameEnabled.checked;
+      const renameFolder = els.renameFolder.value.trim();
+      if (renameRequested && !renameFolder) {
+        showExtractStatus('Enter a folder name to rename', true);
+        return;
+      }
+
+      els.extractBtn.disabled = true;
+      els.extractBtn.className = EXTRACT_BTN_DISABLED;
+      els.extractBtn.textContent = 'Extracting…';
+      showExtractStatus('', false);
+
+      const body = {
+        pairId: selectedPairId,
+        file: selectedZip,
+      };
+      if (renameRequested && renameFolder) {
+        body.renameFolder = renameFolder;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/zip/extract`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          showExtractStatus(data.message || `Extract failed (${response.status})`, true);
+          return;
+        }
+
+        const destLabel = data.extractedTo || '/ (root)';
+        let status = `Extracted ${data.extractedFiles} file${data.extractedFiles === 1 ? '' : 's'} and ${data.extractedDirectories} folder${data.extractedDirectories === 1 ? '' : 's'} into ${destLabel}.`;
+        if (data.renamedFolder) {
+          if (data.renameMode === 'replace') {
+            status += ` Renamed to ${data.renamedFolder}.`;
+          } else {
+            status += ` Wrapped in ${data.renamedFolder}.`;
+          }
+        }
+        showExtractStatus(status, false);
+        selectedZip = '';
+        updateSelectedZipDisplay();
+        fetchBrowse(currentRoot);
+      } catch (err) {
+        showExtractStatus('Failed to extract zip', true);
+        console.error(err);
+      } finally {
+        els.extractBtn.textContent = 'Extract';
+        updateExtractButtonState();
+      }
+    }
+
+    function loadRenameSettings() {
+      try {
+        const enabled = localStorage.getItem(RENAME_ENABLED_KEY) === 'true';
+        const folder = localStorage.getItem(RENAME_FOLDER_KEY);
+        els.renameEnabled.checked = enabled;
+        els.renameFolder.value = typeof folder === 'string' ? folder : '';
+        els.renameFolder.disabled = !enabled;
+      } catch {
+        els.renameEnabled.checked = false;
+        els.renameFolder.value = '';
+        els.renameFolder.disabled = true;
+      }
+    }
+
+    function saveRenameSettings() {
+      try {
+        localStorage.setItem(RENAME_ENABLED_KEY, els.renameEnabled.checked ? 'true' : 'false');
+        localStorage.setItem(RENAME_FOLDER_KEY, els.renameFolder.value);
+      } catch {
+        // ignore storage errors
+      }
+    }
+
+    function updateRenameInputState() {
+      const enabled = els.renameEnabled.checked;
+      els.renameFolder.disabled = !enabled;
+      saveRenameSettings();
+    }
+
+    function init() {
+      loadRenameSettings();
+      els.pairSelect.addEventListener('change', onPairChange);
+      els.extractBtn.addEventListener('click', startExtract);
+      els.renameEnabled.addEventListener('change', updateRenameInputState);
+      els.renameFolder.addEventListener('input', saveRenameSettings);
+      updateExtractButtonState();
+
+      loadDirectoryPairs()
+        .then(() => {
+          if (selectedPairId) {
+            fetchBrowse('').catch((err) => console.error('Browse failed:', err));
+          }
+        })
+        .catch((err) => {
+          showPairStatus('Failed to load directory pairs');
+          console.error(err);
+        });
+    }
+
+    initTheme();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+
+</html>
